@@ -1,5 +1,5 @@
 import os
-from pycorrector.utils.text_utils import lcs
+from pycorrector.utils.text_utils import lcs,get_unify_pinyins
 from pypinyin import pinyin, Style
 import Levenshtein
 
@@ -683,36 +683,6 @@ gb2312_simple_chinese_unicode = [0x4E00,0x4E01,0x4E03,0x4E07,0x4E08,0x4E09,0x4E0
 0x9F3B,0x9F3D,0x9F3E,0x9F44,0x9F50,0x9F51,0x9F7F,0x9F80,0x9F83,0x9F84,
 0x9F85,0x9F86,0x9F87,0x9F88,0x9F89,0x9F8A,0x9F8B,0x9F8C,0x9F99,0x9F9A,]
 
-def get_unify_pinyins(han):
-    pinyins = pinyin(han, style=Style.NORMAL, heteronym=True)[0]
-    uni_pinyins = []
-    for py in pinyins:
-        piny = py
-        if (len(py) >= 2):
-            prefix = piny[:2]
-            if prefix == "zh" or prefix == 'ch' or prefix == 'sh':
-                piny = py[:1] + py[2:]
-            if py[:1] == 'n' and len(py) > 1:
-                piny = 'l' + piny[1:]
-            postfix = py[-3:]
-            if postfix == "ang" or postfix == 'eng' or postfix == 'ing':
-                piny = piny[:-3] + piny[:2]
-        uni_pinyins.append(piny)
-    return uni_pinyins
-
-    # uni_pinyins = []
-    # for pinyin in pinyins:
-    #     if (len(pinyin) >= 2):
-    #         prefix = pinyin[:2]
-    #         if prefix == "zh" or prefix == 'ch' or prefix == 'sh':
-    #             pinyin = pinyin[:1] + pinyin[2:]
-    #         if pinyin[:1] == 'n' and len(pinyin) > 1:
-    #             pinyin = 'l' + pinyin[1:]
-    #         postfix = pinyin[-3:]
-    #         if postfix == "ang" or postfix == 'eng' or postfix == 'ing':
-    #             pinyin = pinyin[:-3] + postfix[:2]
-    #     uni_pinyins.append(pinyin)
-    # return uni_pinyins
 def traditional2simplified(sentence):
     """
     将sentence中的繁体字转为简体字
@@ -721,64 +691,14 @@ def traditional2simplified(sentence):
     """
     return Converter('zh-hans').convert(sentence)
 
-#
-# same_pinyin_map = {}
-# with open(same_pinyin_path0, 'r', encoding='utf-8') as f:
-#     for line in f:
-#         line = line.strip()
-#         if line.startswith('#'):
-#             continue
-#         parts = line.split('\t')
-#         if parts and len(parts) > 2:
-#             key_char = parts[0]
-#             same_pron_same_tone = set(list(parts[1]))
-#             same_pron_diff_tone = set(list(parts[2]))
-#             value = same_pron_same_tone.union(same_pron_diff_tone)
-#             value.add(key_char)
-#
-#             pinyin = lazy_pinyin(key_char)[0]
-#             prefix = pinyin[:2]
-#             if prefix == "zh" or prefix == 'ch' or prefix == 'sh':
-#                 pinyin = pinyin[:1]+pinyin[2:]
-#             if pinyin[:1] == 'n' and len(pinyin) > 1:
-#                 pinyin = 'l' + pinyin[1:]
-#             postfix = pinyin[-3:]
-#             if postfix == "ang" or postfix == 'eng' or postfix == 'ing':
-#                 pinyin = pinyin[:-3] + postfix[:2]
-#             if pinyin and value:
-#                 if pinyin in same_pinyin_map:
-#                     former_value = same_pinyin_map[pinyin]
-#                     value = value.union(former_value)
-#                 same_pinyin_map[pinyin] = value
-# gb2312_simple_chinese_unicode=set()
-# with open(same_pinyin_path1, 'r', encoding='utf-8') as f:
-#     for line in f:
-#         line = line.strip()
-#         if line.startswith('#'):
-#             continue
-#         parts = line.split('\t')
-#         if parts and len(parts) == 1:
-#             key_char = parts[0]
-#             value = set(key_char)
-#         if parts and len(parts) == 2:
-#             key_char = parts[0]
-#             value = set(list(parts[1]))
-#             value.add(key_char)
-#         if parts and len(parts) > 2:
-#             key_char = parts[0]
-#             same_pron_same_tone = set(list(parts[1]))
-#             same_pron_diff_tone = set(list(parts[2]))
-#             value = same_pron_same_tone.union(same_pron_diff_tone)
-#             value.add(key_char)
-#         gb2312_simple_chinese_unicode = gb2312_simple_chinese_unicode.union(value)
-
-han_pinyins_map = dict()
+#gb2312_simple_chinese_unicode=[0x660c, 0x9CB3, 0x9CB4]
+unicode_pinyins_map = dict()
 pinyin_set = set()
-for ch in gb2312_simple_chinese_unicode:
-    ch_pinyins = get_unify_pinyins(ch)
-    han_pinyins_map[ch] = ch_pinyins
-    for ch_pinyin in ch_pinyins:
-        pinyin_set.add(ch_pinyin)
+for unicode in gb2312_simple_chinese_unicode:
+    unicode_pinyins = get_unify_pinyins(chr(unicode))
+    unicode_pinyins_map[unicode] = unicode_pinyins
+    for unicode_pinyin in unicode_pinyins:
+        pinyin_set.add(unicode_pinyin)
 
 pinyin_similarity_map = {}
 for pinyin1 in pinyin_set:
@@ -792,24 +712,24 @@ for pinyin1 in pinyin_set:
 
 similar_pinyin_map = {}
 count = 0
-gb2312_simple_chinese_unicode=['椅','也', '听']
+
 # 椅	医异也疙仪壹蛾宜依食印胰益议夷翼尾疑抑意义听邑射绎艺揖蚁奕
-for ch1 in gb2312_simple_chinese_unicode:
-    pinyins1 = get_unify_pinyins(ch1)
-    similar_pinyin_map[ch1] = []
-    for ch2 in gb2312_simple_chinese_unicode:
-        if ch1 == ch2:
+for unicode1 in gb2312_simple_chinese_unicode:
+    pinyins1 = unicode_pinyins_map[unicode1]
+    similar_pinyin_map[chr(unicode1)] = []
+    for unicode2 in gb2312_simple_chinese_unicode:
+        if unicode1 == unicode2:
             continue
-        pinyins2 = get_unify_pinyins(ch2)
+        pinyins2 = unicode_pinyins_map[unicode2]
         matched = False
         for pinyin1 in pinyins1:
             for pinyin2 in pinyins2:
                 if len(pinyin1) >= len(pinyin2):
-                    lcs_info = lcs(pinyin_similarity_map, [pinyin1], [pinyin2])
+                    lcs_info = lcs(pinyin_similarity_map, [pinyin1], [pinyin2],0.8)
                 else:
-                    lcs_info = lcs(pinyin_similarity_map, [pinyin2], [pinyin1])
+                    lcs_info = lcs(pinyin_similarity_map, [pinyin2], [pinyin1],0.8)
                 if len(lcs_info) > 0:
-                    similar_pinyin_map[ch1].append(ch2)
+                    similar_pinyin_map[chr(unicode1)].append(chr(unicode2))
                     matched = True
                     break
             if matched:

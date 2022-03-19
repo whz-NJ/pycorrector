@@ -24,11 +24,13 @@ class Corrector(Detector):
                  same_stroke_path=config.same_stroke_path,
                  language_model_path=config.language_model_path,
                  word_freq_path=config.word_freq_path,
-                 custom_word_freq_path='',
-                 custom_confusion_path='',
+                 # custom_word_freq_path='',
+                 custom_word_freq_path=config.custom_word_freq_path,
+                 custom_confusion_path=config.custom_confusion_path,
                  person_name_path=config.person_name_path,
                  place_name_path=config.place_name_path,
-                 stopwords_path=config.stopwords_path
+                 stopwords_path=config.stopwords_path,
+                 en_ch_alias_path=config.en_ch_alias_path
                  ):
         super(Corrector, self).__init__(language_model_path=language_model_path,
                                         word_freq_path=word_freq_path,
@@ -36,15 +38,15 @@ class Corrector(Detector):
                                         custom_confusion_path=custom_confusion_path,
                                         person_name_path=person_name_path,
                                         place_name_path=place_name_path,
-                                        stopwords_path=stopwords_path
+                                        stopwords_path=stopwords_path,
+                                        same_pinyin_path=same_pinyin_path,
+                                        en_ch_alias_path=config.en_ch_alias_path
                                         )
         self.name = 'corrector'
         self.common_char_path = common_char_path
-        self.same_pinyin_text_path = same_pinyin_path
         self.same_stroke_text_path = same_stroke_path
         self.initialized_corrector = False
         self.cn_char_set = None
-        self.same_pinyin = None
         self.same_stroke = None
 
     @staticmethod
@@ -58,33 +60,6 @@ class Corrector(Detector):
                 if w:
                     words.add(w)
         return words
-
-    @staticmethod
-    def load_same_pinyin(path, sep='\t'):
-        """
-        加载同音字
-        :param path:
-        :param sep:
-        :return:
-        """
-        result = dict()
-        if not os.path.exists(path):
-            logger.warn("file not exists:" + path)
-            return result
-        with open(path, 'r', encoding='utf-8') as f:
-            for line in f:
-                line = line.strip()
-                if line.startswith('#'):
-                    continue
-                parts = line.split(sep)
-                if parts and len(parts) > 2:
-                    key_char = parts[0]
-                    same_pron_same_tone = set(list(parts[1]))
-                    same_pron_diff_tone = set(list(parts[2]))
-                    value = same_pron_same_tone.union(same_pron_diff_tone)
-                    if key_char and value:
-                        result[key_char] = value
-        return result
 
     @staticmethod
     def load_same_stroke(path, sep='\t'):
@@ -114,8 +89,6 @@ class Corrector(Detector):
     def _initialize_corrector(self):
         # chinese common char
         self.cn_char_set = self.load_set_file(self.common_char_path)
-        # same pinyin
-        self.same_pinyin = self.load_same_pinyin(self.same_pinyin_text_path)
         # same stroke
         self.same_stroke = self.load_same_stroke(self.same_stroke_text_path)
         self.initialized_corrector = True
@@ -123,15 +96,6 @@ class Corrector(Detector):
     def check_corrector_initialized(self):
         if not self.initialized_corrector:
             self._initialize_corrector()
-
-    def get_same_pinyin(self, char):
-        """
-        取同音字
-        :param char:
-        :return:
-        """
-        self.check_corrector_initialized()
-        return self.same_pinyin.get(char, set())
 
     def get_same_stroke(self, char):
         """
@@ -156,8 +120,10 @@ class Corrector(Detector):
 
     def _confusion_word_set(self, word):
         confusion_word_set = set()
+        ## WHZ 找到所有编辑距离为1的常用词（长度相同）
         candidate_words = list(self.known(edit_distance_word(word, self.cn_char_set)))
         for candidate_word in candidate_words:
+            #如果两个词的拼音一样，则替换
             if lazy_pinyin(candidate_word) == lazy_pinyin(word):
                 # same pinyin
                 confusion_word_set.add(candidate_word)
@@ -193,7 +159,7 @@ class Corrector(Detector):
             # same one char pinyin
             confusion = [i for i in self._confusion_char_set(word[0]) if i]
             candidates_1.extend(confusion)
-        if len(word) == 2:
+        if len(word) >= 2:
             # same first char pinyin
             confusion = [i + word[1:] for i in self._confusion_char_set(word[0]) if i]
             candidates_2.extend(confusion)
@@ -219,41 +185,88 @@ class Corrector(Detector):
         confusion_sorted = sorted(confusion_word_list, key=lambda k: self.word_frequency(k), reverse=True)
         return confusion_sorted[:len(confusion_word_list) // fragment + 1]
 
-    def get_lm_correct_item(self, cur_item, candidates, before_sent, after_sent, threshold=57, cut_type='char'):
+    def get_lm_correct_item(self, sentence, modified_sentence_old_start_idx, crossed_begin_end_idx, maybe_errors_map, details, cut_type='word', threshold=1.2):
         """
         通过语言模型纠正字词错误
-        :param cur_item: 当前词
-        :param candidates: 候选词
-        :param before_sent: 前半部分句子
-        :param after_sent: 后半部分句子
-        :param threshold: ppl阈值, 原始字词替换后大于该ppl值则认为是错误
+        :param sentence: 目前为止纠错得到的最新的句子内容
+        :param modified_sentence_old_start_idx: 当前句子在前面部分已修改text中的位置
+        :param crossed_begin_end_idx: 重叠纠错项合并起始/结束位置(词在 text 原始输入的起始/结束位置)
+        :param maybe_errors_map: 目前为止待处理的纠错项
+        :parm details: 纠错历史信息
         :param cut_type: 切词方式, 字粒度
-        :return: str, correct item, 正确的字词
+        :param threshold: ppl系数, 原始字词替换后大于原词ppl值*系数，则认为是错误
+        :return: 更新后的 sentence（ maybe_errors_map 内容也会更新）
         """
-        result = cur_item
-        if cur_item not in candidates:
-            candidates.append(cur_item)
+        # 得到待纠错词在 sentence 中的位置
+        pos_index_pair = crossed_begin_end_idx.split("_")
+        crossed_begin_idx = int(pos_index_pair[0])
+        crossed_end_idx = int(pos_index_pair[1])
+        #找纠错项
+        top_token = None
+        crossed_maybe_errors = maybe_errors_map[crossed_begin_end_idx]
+        for token, begin_idx, end_idx, error_type in crossed_maybe_errors:
+            if error_type == ErrorType.confusion: #强制纠错
+                top_token = token
+                old_begin_idx = begin_idx
+                old_end_idx = end_idx
+                # 转换为目前为止已部分修改的句子的位置
+                new_begin_idx = self.get_current_pose_idx(old_begin_idx) - modified_sentence_old_start_idx
+                # 因为要取替换前的后续文字，所以这里值不是 new_begin_idx + len(top_token)
+                new_end_idx = new_begin_idx + (old_end_idx - old_begin_idx)
+                cur_item = sentence[new_begin_idx:new_end_idx]
+                break #重叠位置的纠错项仅随机取一个
+        if top_token is None: #未找到强制纠错项
+            new_begin_idx = self.get_current_pose_idx(crossed_begin_idx) - modified_sentence_old_start_idx
+            # crossed_end_idx 在 old_new_pose_idx_list 表没有记录
+            new_end_idx = new_begin_idx + (crossed_end_idx - crossed_begin_idx)
+            # 取得待纠错的词
+            cur_item = sentence[new_begin_idx:new_end_idx]
+            #correction_ppl_score_map = {}
+            cur_score = self.ppl_score(segment(sentence, cut_type))
+            cur_candidate = (cur_item, crossed_begin_idx, crossed_end_idx, ErrorType.word)
+            #correction_ppl_score_map[candidate] = score
+            top_score = cur_score
+            top_candidate = cur_candidate
+            for candidate in crossed_maybe_errors:
+                token, begin_idx, end_idx = candidate[0],candidate[1],candidate[2]
+                new_begin_idx = self.get_current_pose_idx(begin_idx) - modified_sentence_old_start_idx
+                new_end_idx = new_begin_idx + (end_idx - begin_idx)
+                score = self.ppl_score(segment(sentence[:new_begin_idx] + token + sentence[new_end_idx:], cut_type))
+                #correction_ppl_score_map[candidate] = score
+                if top_score > score: # ppl_score 越小越通顺
+                    top_score = score
+                    top_candidate = candidate
+            # 只要原词ppl_score得分小于最通顺替换词得分的threshold倍，则不替换，防止误纠
+            if (top_score * threshold) >= cur_score:
+                if top_candidate[0] != cur_item:
+                    top_candidate = cur_candidate
+            top_token = top_candidate[0]
+            old_begin_idx = top_candidate[1]
+            old_end_idx = top_candidate[2]
+            new_begin_idx = self.get_current_pose_idx(old_begin_idx) - modified_sentence_old_start_idx
+            new_end_idx = new_begin_idx + (old_end_idx - old_begin_idx)
 
-        ppl_scores = {i: self.ppl_score(segment(before_sent + i + after_sent, cut_type=cut_type)) for i in candidates}
-        sorted_ppl_scores = sorted(ppl_scores.items(), key=lambda d: d[1])
+        del maybe_errors_map[crossed_begin_end_idx]
+        if top_token != cur_item: #发现调整项
+            # 修正句子
+            sentence = sentence[:new_begin_idx] + top_token + sentence[new_end_idx:]
+            # 记录修正信息
+            detail_word = (cur_item, top_token, old_begin_idx, old_end_idx)
+            details.append(detail_word)
+            # 寻找和 top_item 不重叠的 item
+            for candidate in crossed_maybe_errors:
+                # token, begin_idx, end_idx = candidate
+                token, begin_idx, end_idx = candidate[0], candidate[1], candidate[2]
+                if begin_idx >= old_end_idx or end_idx <= old_begin_idx:
+                    self._add_maybe_error_item(candidate, maybe_errors_map)
+            self.update_pose_idx(old_begin_idx, old_end_idx - old_begin_idx, top_token)
+        return sentence
 
-        # 增加正确字词的修正范围，减少误纠
-        top_items = []
-        top_score = 0.0
-        for i, v in enumerate(sorted_ppl_scores):
-            v_word = v[0]
-            v_score = v[1]
-            if i == 0:
-                top_score = v_score
-                top_items.append(v_word)
-            # 通过阈值修正范围
-            elif v_score < top_score + threshold:
-                top_items.append(v_word)
-            else:
-                break
-        if cur_item not in top_items:
-            result = top_items[0]
-        return result
+    def getRange(self, key):
+        min_max = key.split("_")
+        min = int(min_max[0])
+        max = int(min_max[1])
+        return max - min
 
     def correct(self, text, include_symbol=True, num_fragment=1, threshold=57, **kwargs):
         """
@@ -272,28 +285,19 @@ class Corrector(Detector):
         text = convert_to_unicode(text)
         # 长句切分为短句
         blocks = split_2_short_text(text, include_symbol=include_symbol)
+        self.old_new_pos_list = []
+        total_delta = 0
         for blk, idx in blocks:
-            maybe_errors = self.detect_short(blk, idx)
-            for cur_item, begin_idx, end_idx, err_type in maybe_errors:
-                # 纠错，逐个处理
-                before_sent = blk[:(begin_idx - idx)]
-                after_sent = blk[(end_idx - idx):]
-
-                # 困惑集中指定的词，直接取结果
-                if err_type == ErrorType.confusion:
-                    corrected_item = self.custom_confusion[cur_item]
-                else:
-                    # 取得所有可能正确的词
-                    candidates = self.generate_items(cur_item, fragment=num_fragment)
-                    if not candidates:
-                        continue
-                    corrected_item = self.get_lm_correct_item(cur_item, candidates, before_sent, after_sent,
-                                                              threshold=threshold)
-                # output
-                if corrected_item != cur_item:
-                    blk = before_sent + corrected_item + after_sent
-                    detail_word = (cur_item, corrected_item, begin_idx, end_idx)
-                    details.append(detail_word)
-            text_new += blk
+            # maybe_errors_map 的 key 为原词在 text 中的 开始位置_结束位置
+            # value 为 [候选词,原词起始位置,原词结束位置,错误类型]
+            blk2 = blk
+            maybe_errors_map = self.detect_short(blk2, idx, total_delta)
+            # 按照每个key归类的 maybe_errors 中取最匹配的，再把与该类与最匹配的 maybe_error 不重叠的再归成子类，
+            # 求各子类中最匹配的 maybe_errors，依次下去，直到集合为空，优先处理范围宽的
+            while len(maybe_errors_map) > 0:
+                for crossed_begin_end_idx in sorted(maybe_errors_map.keys(), key = lambda k: self.getRange(k), reverse=True):
+                    blk2 = self.get_lm_correct_item(blk2, idx + total_delta, crossed_begin_end_idx, maybe_errors_map, details)
+            text_new += blk2
+            total_delta += (len(blk2) - len(blk))
         details = sorted(details, key=operator.itemgetter(2))
         return text_new, details

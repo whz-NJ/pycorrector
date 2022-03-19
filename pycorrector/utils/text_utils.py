@@ -6,10 +6,8 @@
 
 import re
 
-import pypinyin
 import six
-from pypinyin import pinyin
-from pypinyin import lazy_pinyin
+from pypinyin import pinyin, Style
 from pycorrector.utils.langconv import Converter
 
 
@@ -188,7 +186,7 @@ def lcs(pinyin_similarity_map, sentence_pinyin, words_pinyin, threshold=0.7):
         if similarities[x][y] < similarities_sum:
             break
         while direction[x - 1][y] == '↖' and similarities[x - 1][y] == similarities_sum:
-            x -= 1
+            x -= 1 #找右侧最靠近左侧的最贴近的匹配位置
         minX, maxX = len(sentence_pinyin), -1
         matched_pinyins = ''
         while x != 0 and y != 0:
@@ -211,20 +209,22 @@ def lcs(pinyin_similarity_map, sentence_pinyin, words_pinyin, threshold=0.7):
         result.append(matched_info)
     return result
 
-def unify_pinyin(words):
-    pinyins = lazy_pinyin(words)
+def get_unify_pinyins(words):
+    pinyins = pinyin(words, style=Style.NORMAL, heteronym=True)[0]
     uni_pinyins = []
-    for pinyin in pinyins:
-        if (len(pinyin) >= 2):
-            prefix = pinyin[:2]
+    for py in pinyins:
+        pinyin0 = py
+        if len(py) >= 2:
+            prefix = pinyin0[:2]
             if prefix == "zh" or prefix == 'ch' or prefix == 'sh':
-                pinyin = pinyin[:1] + pinyin[2:]
-            if pinyin[:1] == 'n' and len(pinyin) > 1:
-                pinyin = 'l' + pinyin[1:]
-            postfix = pinyin[-3:]
+                pinyin0 = prefix[:1] + py[2:]
+        if pinyin0[0] == 'n' and len(pinyin0) > 1:
+            pinyin0 = 'l' + pinyin0[1:]
+        if len(pinyin0) >= 3:
+            postfix = pinyin0[-3:]
             if postfix == "ang" or postfix == 'eng' or postfix == 'ing':
-                pinyin = pinyin[:-3] + postfix[:2]
-        uni_pinyins.append(pinyin)
+                pinyin0 = pinyin0[:-3] + postfix[:2]
+        uni_pinyins.append(pinyin0)
     return uni_pinyins
 
 if __name__ == "__main__":

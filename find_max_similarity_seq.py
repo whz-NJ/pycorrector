@@ -1,6 +1,6 @@
 import os
 import Levenshtein
-from pycorrector.utils.text_utils import unify_pinyin
+from pycorrector.utils.text_utils import get_unify_pinyins
 
 pwd_path = os.path.abspath(os.path.dirname(__file__))
 same_pinyin_file_path = pwd_path + "/pycorrector/data/same_pinyin_2.txt"
@@ -13,7 +13,7 @@ with open(same_pinyin_file_path, 'r', encoding='utf-8') as f:
         parts = line.split('\t')
         if parts and len(parts) >= 1:
             key_char = parts[0]
-            pinyin = unify_pinyin(key_char)
+            pinyin = get_unify_pinyins(key_char)
             pinyin_set.add(pinyin[0])
 pinyin_similarity_map = {}
 for pinyin1 in pinyin_set:
@@ -91,7 +91,7 @@ def lcs(sentence_pinyin, words_pinyin, threshold=0.7):
 # word = "乔峰"
 sentence = '歪发信号'
 word = "歪发一"
-sentence_pinyin = unify_pinyin(sentence)
-word_pinyin = unify_pinyin(word)
+sentence_pinyin = get_unify_pinyins(sentence)
+word_pinyin = get_unify_pinyins(word)
 result = lcs(sentence_pinyin, word_pinyin)
 print(result)
