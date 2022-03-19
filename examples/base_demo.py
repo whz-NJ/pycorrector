@@ -11,7 +11,12 @@ sys.path.append("..")
 import pycorrector
 
 if __name__ == '__main__':
-    corrected_sent, detail = pycorrector.correct('少先队员因该为老人让坐')
+    corrected_sent, detail = pycorrector.correct('家里的歪发信号不好')
+    #corrected_sent, detail = pycorrector.correct('下面请消峰分享项目经验')
+    #corrected_sent, detail = pycorrector.correct('视讯打屏计费确认页分省贯控需求')
+    # corrected_sent, detail = pycorrector.correct('一只小鱼船浮在平静的河面上')
+    #corrected_sent, detail = pycorrector.correct('少现队员音该为闹人让桌。希望你们好好的跳无')
+    #corrected_sent, detail = pycorrector.correct('机七学习是人工智能领遇最能体现智能的一个分知')
     print(corrected_sent, detail)
 
     error_sentences = [

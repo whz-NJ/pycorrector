@@ -9,7 +9,7 @@ import re
 import pypinyin
 import six
 from pypinyin import pinyin
-
+from pypinyin import lazy_pinyin
 from pycorrector.utils.langconv import Converter
 
 
@@ -152,6 +152,80 @@ def get_homophones_by_pinyin(input_pinyin):
             result.append(chr(i))
     return result
 
+# get LCS(longest common subsquence),DP
+def lcs(pinyin_similarity_map, sentence_pinyin, words_pinyin, threshold=0.7):
+    # 得到一个二维的数组，类似用dp[lena+1][lenb+1],并且初始化为0
+    similarities = [[0 for j in range(len(words_pinyin) + 1)] for i in range(len(sentence_pinyin) + 1)]
+    direction = [[0 for j in range(len(words_pinyin) + 1)] for i in range(len(sentence_pinyin) + 1)]
+
+    # enumerate(a)函数： 得到下标i和a[i]
+    for i, x in enumerate(sentence_pinyin):
+        for j, y in enumerate(words_pinyin):
+            similarity = pinyin_similarity_map[x][y]
+            if similarity > threshold:
+                similarities[i + 1][j + 1] = similarities[i][j] + similarity
+                direction[i + 1][j + 1] = '↖'
+            else:
+                left_similarity = similarities[i + 1][j]
+                top_similarity = similarities[i][j + 1]
+                if left_similarity > top_similarity:
+                    similarities[i + 1][j + 1] = left_similarity
+                    direction[i + 1][j + 1] = '←'
+                else:
+                    similarities[i + 1][j + 1] = top_similarity
+                    direction[i + 1][j + 1] = '↑'
+
+    similarities_sum = similarities[len(sentence_pinyin)][len(words_pinyin)]
+    rough_score = similarities_sum / len(words_pinyin)
+    if rough_score < threshold:
+        return []
+
+    # 到这里已经得到最长的子序列的长度，下面从这个矩阵中就是得到最长子序列
+    result = []
+    x = len(sentence_pinyin)
+    while x != 0:
+        y = len(words_pinyin)
+        if similarities[x][y] < similarities_sum:
+            break
+        while direction[x - 1][y] == '↖' and similarities[x - 1][y] == similarities_sum:
+            x -= 1
+        minX, maxX = len(sentence_pinyin), -1
+        matched_pinyins = ''
+        while x != 0 and y != 0:
+            if direction[x][y] == '↖':
+                matched_pinyins = sentence_pinyin[x - 1] + matched_pinyins
+                x -= 1
+                y -= 1
+                if maxX == -1:
+                    maxX = x
+                minX = x
+            elif direction[x][y] == '←':
+                y -= 1
+            else:  # direction[x][y]='↑'
+                x -= 1
+        if maxX == -1:
+            matched_info = {'matchedScore': 0}
+        else:
+            matched_score = similarities_sum / max((maxX - minX + 1), len(words_pinyin))
+            matched_info = {'maxMatchedLen': similarities_sum, 'matchedScore': matched_score, 'range': [minX, maxX]}
+        result.append(matched_info)
+    return result
+
+def unify_pinyin(words):
+    pinyins = lazy_pinyin(words)
+    uni_pinyins = []
+    for pinyin in pinyins:
+        if (len(pinyin) >= 2):
+            prefix = pinyin[:2]
+            if prefix == "zh" or prefix == 'ch' or prefix == 'sh':
+                pinyin = pinyin[:1] + pinyin[2:]
+            if pinyin[:1] == 'n' and len(pinyin) > 1:
+                pinyin = 'l' + pinyin[1:]
+            postfix = pinyin[-3:]
+            if postfix == "ang" or postfix == 'eng' or postfix == 'ing':
+                pinyin = pinyin[:-3] + postfix[:2]
+        uni_pinyins.append(pinyin)
+    return uni_pinyins
 
 if __name__ == "__main__":
     a = 'nihao'
@@ -174,3 +248,7 @@ if __name__ == "__main__":
     print(traditional_sentence, simplified_sentence)
     print(is_alphabet_string('Teacher'))
     print(is_alphabet_string('Teacher '))
+
+    result = lcs(["qing",'xiao', 'feng'], ['qiao','feng'])
+    print(result)
+
