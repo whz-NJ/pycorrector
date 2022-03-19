@@ -1,6 +1,6 @@
 import os
 from pycorrector.utils.text_utils import lcs
-from pypinyin import pinyin, Style
+from pypinyin import pinyin, lazy_pinyin, Style
 import Levenshtein
 
 pwd_path = os.path.abspath(os.path.dirname(__file__))
@@ -692,7 +692,8 @@ def traditional2simplified(sentence):
     return Converter('zh-hans').convert(sentence)
 
 def get_unify_pinyins(han):
-    pinyins = pinyin(han, style=Style.NORMAL, heteronym=True)[0] #这里han仅为一个汉字，所以只取第一个只所有拼音（考虑多音字）
+    # pinyins = pinyin(han, style=Style.NORMAL, heteronym=True)[0] #这里han仅为一个汉字，所以只取第一个只所有拼音（考虑多音字）
+    pinyins = lazy_pinyin(han) # 不考虑多音字
     uni_pinyins = []
     for p in pinyins:
         py = p
@@ -709,7 +710,7 @@ def get_unify_pinyins(han):
         uni_pinyins.append(py)
     return uni_pinyins
 
-gb2312_simple_chinese_unicode=[0x524a, 0x56af]
+#b2312_simple_chinese_unicode=[0x524a, 0x56af]
 unicode_pinyins_map = dict()
 pinyin_set = set()
 for unicode in gb2312_simple_chinese_unicode:
@@ -742,9 +743,9 @@ for unicode1 in gb2312_simple_chinese_unicode:
         for pinyin1 in pinyins1:
             for pinyin2 in pinyins2:
                 if len(pinyin1) >= len(pinyin2):
-                    lcs_info = lcs(pinyin_similarity_map, [pinyin1], [pinyin2],0.8)
+                    lcs_info = lcs(pinyin_similarity_map, [pinyin1], [pinyin2],0.7)
                 else:
-                    lcs_info = lcs(pinyin_similarity_map, [pinyin2], [pinyin1],0.8)
+                    lcs_info = lcs(pinyin_similarity_map, [pinyin2], [pinyin1],0.7)
                 if len(lcs_info) > 0:
                     similar_pinyin_map[chr(unicode1)].append(chr(unicode2))
                     matched = True
