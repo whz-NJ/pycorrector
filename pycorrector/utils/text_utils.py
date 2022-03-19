@@ -7,9 +7,9 @@
 import re
 
 import six
-from pypinyin import pinyin, Style
+from pypinyin import pinyin, Style,lazy_pinyin
 from pycorrector.utils.langconv import Converter
-
+from xpinyin import Pinyin
 
 def convert_to_unicode(text):
     """Converts `text` to Unicode (if it's not already), assuming utf-8 input."""
@@ -210,22 +210,24 @@ def lcs(pinyin_similarity_map, sentence_pinyin, words_pinyin, threshold=0.7):
     return result
 
 def get_unify_pinyins(words):
-    pinyins = pinyin(words, style=Style.NORMAL, heteronym=True)[0]
+    pinyins = lazy_pinyin(words) # 不考虑多音字情况（在匹配句子和热词时都不考虑多音字）
     uni_pinyins = []
-    for py in pinyins:
-        pinyin0 = py
-        if len(py) >= 2:
-            prefix = pinyin0[:2]
+    for p in pinyins:
+        py = p
+        if len(p) >= 2:
+            prefix = py[:2]
             if prefix == "zh" or prefix == 'ch' or prefix == 'sh':
-                pinyin0 = prefix[:1] + py[2:]
-        if pinyin0[0] == 'n' and len(pinyin0) > 1:
-            pinyin0 = 'l' + pinyin0[1:]
-        if len(pinyin0) >= 3:
-            postfix = pinyin0[-3:]
+                py = prefix[:1] + p[2:]
+        if py[0] == 'n' and len(py) > 1:
+            py = 'l' + py[1:]
+        if len(py) >= 3:
+            postfix = py[-3:]
             if postfix == "ang" or postfix == 'eng' or postfix == 'ing':
-                pinyin0 = pinyin0[:-3] + postfix[:2]
-        uni_pinyins.append(pinyin0)
+                py = py[:-3] + postfix[:2]
+        uni_pinyins.append(py)
     return uni_pinyins
+
+get_unify_pinyins('单华奇')
 
 if __name__ == "__main__":
     a = 'nihao'

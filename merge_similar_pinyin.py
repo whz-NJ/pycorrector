@@ -1,5 +1,5 @@
 import os
-from pycorrector.utils.text_utils import lcs,get_unify_pinyins
+from pycorrector.utils.text_utils import lcs
 from pypinyin import pinyin, Style
 import Levenshtein
 
@@ -691,7 +691,25 @@ def traditional2simplified(sentence):
     """
     return Converter('zh-hans').convert(sentence)
 
-#gb2312_simple_chinese_unicode=[0x660c, 0x9CB3, 0x9CB4]
+def get_unify_pinyins(han):
+    pinyins = pinyin(han, style=Style.NORMAL, heteronym=True)[0] #这里han仅为一个汉字，所以只取第一个只所有拼音（考虑多音字）
+    uni_pinyins = []
+    for p in pinyins:
+        py = p
+        if len(p) >= 2:
+            prefix = py[:2]
+            if prefix == "zh" or prefix == 'ch' or prefix == 'sh':
+                py = prefix[:1] + p[2:]
+        if py[0] == 'n' and len(py) > 1:
+            py = 'l' + py[1:]
+        if len(py) >= 3:
+            postfix = py[-3:]
+            if postfix == "ang" or postfix == 'eng' or postfix == 'ing':
+                py = py[:-3] + postfix[:2]
+        uni_pinyins.append(py)
+    return uni_pinyins
+
+gb2312_simple_chinese_unicode=[0x524a, 0x56af]
 unicode_pinyins_map = dict()
 pinyin_set = set()
 for unicode in gb2312_simple_chinese_unicode:
@@ -713,7 +731,6 @@ for pinyin1 in pinyin_set:
 similar_pinyin_map = {}
 count = 0
 
-# 椅	医异也疙仪壹蛾宜依食印胰益议夷翼尾疑抑意义听邑射绎艺揖蚁奕
 for unicode1 in gb2312_simple_chinese_unicode:
     pinyins1 = unicode_pinyins_map[unicode1]
     similar_pinyin_map[chr(unicode1)] = []
