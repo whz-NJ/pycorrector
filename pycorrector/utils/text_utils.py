@@ -7,6 +7,7 @@
 import re
 
 import six
+import pypinyin
 from pypinyin import pinyin, Style,lazy_pinyin
 from pycorrector.utils.langconv import Converter
 import Levenshtein
@@ -150,7 +151,7 @@ def get_homophones_by_pinyin(input_pinyin):
             result.append(chr(i))
     return result
 
-def _get_update_pinyin_similarity(pinyin_similarity_map, pinyin1, pinyin2):
+def get_update_pinyin_similarity(pinyin_similarity_map, pinyin1, pinyin2):
     similarity_map = pinyin_similarity_map.get(pinyin1, None)
     if similarity_map is not None:
         similarity = similarity_map.get(pinyin2, None)
@@ -211,7 +212,7 @@ def lcs(pinyin_similarity_map, sentence_pinyin, words_pinyin, threshold=0.7):
     # enumerate(a)函数： 得到下标i和a[i]
     for i, x in enumerate(sentence_pinyin):
         for j, y in enumerate(words_pinyin):
-            similarity = _get_update_pinyin_similarity(pinyin_similarity_map, x, y)
+            similarity = get_update_pinyin_similarity(pinyin_similarity_map, x, y)
             if similarity > threshold:
                 similarities[i + 1][j + 1] = similarities[i][j] + similarity
                 direction[i + 1][j + 1] = '↖'

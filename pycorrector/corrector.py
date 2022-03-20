@@ -90,7 +90,7 @@ class Corrector(Detector):
         # chinese common char
         self.cn_char_set = self.load_set_file(self.common_char_path)
         # same stroke
-        self.same_stroke = self.load_same_stroke(self.same_stroke_text_path)
+        # self.same_stroke = self.load_same_stroke(self.same_stroke_text_path)
         self.initialized_corrector = True
 
     def check_corrector_initialized(self):
