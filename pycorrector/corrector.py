@@ -21,7 +21,7 @@ class Corrector(Detector):
     def __init__(self,
                  common_char_path=config.common_char_path,
                  same_pinyin_path=config.same_pinyin_path,
-                 same_stroke_path=config.same_stroke_path,
+                 # same_stroke_path=config.same_stroke_path,
                  language_model_path=config.language_model_path,
                  word_freq_path=config.word_freq_path,
                  # custom_word_freq_path='',
@@ -44,7 +44,7 @@ class Corrector(Detector):
                                         )
         self.name = 'corrector'
         self.common_char_path = common_char_path
-        self.same_stroke_text_path = same_stroke_path
+        #self.same_stroke_text_path = same_stroke_path
         self.initialized_corrector = False
         self.cn_char_set = None
         self.same_stroke = None
@@ -198,6 +198,7 @@ class Corrector(Detector):
         :return: 更新后的 sentence（ maybe_errors_map 内容也会更新）
         """
         # 得到待纠错词在 sentence 中的位置
+        sentence = sentence.lower() #将可能存在的英文单词全部转换为小写
         pos_index_pair = crossed_begin_end_idx.split("_")
         crossed_begin_idx = int(pos_index_pair[0])
         crossed_end_idx = int(pos_index_pair[1])

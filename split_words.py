@@ -10,6 +10,7 @@ ignore_marks = set(m for m in ignore_marks_str)
 def split_words(sentence):
     non_chinese = ''
     words = []
+    sentence = sentence.lower() #将可能存在的英文单词转换为小写
     for uchar in sentence:
         if uchar in ignore_marks:
             if len(non_chinese) > 0:
@@ -38,7 +39,7 @@ def split_words(sentence):
     if last_char not in sentence_ending_marks: #添加句结束标识
         words.append('。')
     return jieba.lcut("".join(words))
-print(split_words("门户&MC平台增长90%"))
+print(split_words("门户&MC OA平台增长90%"))
 
 in_path = sys.argv[1]
 out_path = in_path[0:in_path.rindex('.')] + '_split.txt'

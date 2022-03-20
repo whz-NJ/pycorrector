@@ -20,6 +20,7 @@ if not mark_pattern.match('/abc'):
 def split_words(sentence):
     non_chinese = ''
     words = []
+    sentence = sentence.lower() #将可能存在的英文单词转换为小写
     for uchar in sentence:
         if uchar in ignore_marks:
             if len(non_chinese) > 0:

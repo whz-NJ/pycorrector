@@ -9,7 +9,7 @@ import re
 import six
 from pypinyin import pinyin, Style,lazy_pinyin
 from pycorrector.utils.langconv import Converter
-from xpinyin import Pinyin
+import Levenshtein
 
 def convert_to_unicode(text):
     """Converts `text` to Unicode (if it's not already), assuming utf-8 input."""
@@ -150,6 +150,58 @@ def get_homophones_by_pinyin(input_pinyin):
             result.append(chr(i))
     return result
 
+def _get_update_pinyin_similarity(pinyin_similarity_map, pinyin1, pinyin2):
+    similarity_map = pinyin_similarity_map.get(pinyin1, None)
+    if similarity_map is not None:
+        similarity = similarity_map.get(pinyin2, None)
+        if similarity is not None:
+            return similarity
+        # pinyin1 是老的，pinyin2 是新增的
+        distance = Levenshtein.distance(pinyin1, pinyin2)
+        result = 1.0 - distance/max(len(pinyin1), len(pinyin2))
+        pinyin_similarity_map[pinyin1][pinyin2] = result
+        pinyin_similarity_map[pinyin2] = {}
+        pinyin_similarity_map[pinyin2][pinyin2] = 1.0
+        pinyin_similarity_map[pinyin2][pinyin1] = result
+        for py in pinyin_similarity_map: #计算pinyin2和其他汉字拼音的相似度
+            if py != pinyin1 and py != pinyin2:
+                distance = Levenshtein.distance(py, pinyin2)
+                similarity = 1.0 - distance/max(len(py), len(pinyin2))
+                pinyin_similarity_map[py][pinyin2] = similarity
+                pinyin_similarity_map[pinyin2][py] = similarity
+    else:
+        similarity_map = pinyin_similarity_map.get(pinyin2, None)
+        if similarity_map is not None: # pinyin1 是新增的，pinyin2 是老的
+            distance = Levenshtein.distance(pinyin1, pinyin2)
+            result = 1.0 - distance / max(len(pinyin1), len(pinyin2))
+            pinyin_similarity_map[pinyin2][pinyin1] = result
+            pinyin_similarity_map[pinyin1] = {}
+            pinyin_similarity_map[pinyin1][pinyin1] = 1.0
+            pinyin_similarity_map[pinyin1][pinyin2] = result
+            for py in pinyin_similarity_map: #计算pinyin1和其他汉字拼音的相似度
+                if py != pinyin1 and py != pinyin2:
+                    distance = Levenshtein.distance(py, pinyin1)
+                    similarity = 1.0 - distance / max(len(py), len(pinyin2))
+                    pinyin_similarity_map[py][pinyin1] = similarity
+                    pinyin_similarity_map[pinyin1][py] = similarity
+        else: # pinyin1 和 pinyin2 都是新增的
+            distance = Levenshtein.distance(pinyin1, pinyin2)
+            result = 1.0 - distance / max(len(pinyin1), len(pinyin2))
+            pinyin_similarity_map[pinyin1] = {}
+            pinyin_similarity_map[pinyin1][pinyin1] = 1.0
+            pinyin_similarity_map[pinyin1][pinyin2] = result
+            pinyin_similarity_map[pinyin2] = {}
+            pinyin_similarity_map[pinyin2][pinyin2] = 1.0
+            pinyin_similarity_map[pinyin2][pinyin1] = result
+            for py1 in [pinyin1, pinyin2]: #计算其他汉字拼音和pinyin1/pinyin2的相似度
+                for py2 in pinyin_similarity_map:
+                    if py2 != pinyin1 and py2 != pinyin2:
+                        distance = Levenshtein.distance(py1, py2)
+                        similarity = 1.0 - distance / max(len(py1), len(py2))
+                        pinyin_similarity_map[py1][py2] = similarity
+                        pinyin_similarity_map[py2][py1] = similarity
+    return result
+
 # get LCS(longest common subsquence),DP
 def lcs(pinyin_similarity_map, sentence_pinyin, words_pinyin, threshold=0.7):
     # 得到一个二维的数组，类似用dp[lena+1][lenb+1],并且初始化为0
@@ -159,7 +211,7 @@ def lcs(pinyin_similarity_map, sentence_pinyin, words_pinyin, threshold=0.7):
     # enumerate(a)函数： 得到下标i和a[i]
     for i, x in enumerate(sentence_pinyin):
         for j, y in enumerate(words_pinyin):
-            similarity = pinyin_similarity_map[x][y]
+            similarity = _get_update_pinyin_similarity(pinyin_similarity_map, x, y)
             if similarity > threshold:
                 similarities[i + 1][j + 1] = similarities[i][j] + similarity
                 direction[i + 1][j + 1] = '↖'
@@ -209,8 +261,26 @@ def lcs(pinyin_similarity_map, sentence_pinyin, words_pinyin, threshold=0.7):
         result.append(matched_info)
     return result
 
-def get_unify_pinyins(words):
-    pinyins = lazy_pinyin(words) # 不考虑多音字情况（在匹配句子和热词时都不考虑多音字）
+def get_all_unify_pinyins(han):
+    pinyins = pinyin(han, style=Style.NORMAL, heteronym=True)[0] #这里han仅为一个汉字，所以只取第一个只所有拼音（考虑多音字）
+    uni_pinyins = []
+    for p in pinyins:
+        py = p
+        if len(p) >= 2:
+            prefix = py[:2]
+            if prefix == "zh" or prefix == 'ch' or prefix == 'sh':
+                py = prefix[:1] + p[2:]
+        if py[0] == 'n' and len(py) > 1:
+            py = 'l' + py[1:]
+        if len(py) >= 3:
+            postfix = py[-3:]
+            if postfix == "ang" or postfix == 'eng' or postfix == 'ing':
+                py = py[:-3] + postfix[:2]
+        uni_pinyins.append(py)
+    return uni_pinyins
+
+def get_unify_pinyins(hans):
+    pinyins = lazy_pinyin(hans) # 不考虑多音字情况（该方法会根据词/句子将多音字转为正确的拼音---单华奇人名不行）
     uni_pinyins = []
     for p in pinyins:
         py = p

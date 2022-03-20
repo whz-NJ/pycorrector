@@ -1,7 +1,8 @@
 import os
-from pycorrector.utils.text_utils import lcs
+from pycorrector.utils.text_utils import lcs, get_all_unify_pinyins
 from pypinyin import pinyin, lazy_pinyin, Style
 import Levenshtein
+from pycorrector.utils.langconv import Converter
 
 pwd_path = os.path.abspath(os.path.dirname(__file__))
 # same_pinyin_path0 = os.path.join(pwd_path, 'same_pinyin.txt')
@@ -691,30 +692,15 @@ def traditional2simplified(sentence):
     """
     return Converter('zh-hans').convert(sentence)
 
-def get_unify_pinyins(han):
-    # pinyins = pinyin(han, style=Style.NORMAL, heteronym=True)[0] #这里han仅为一个汉字，所以只取第一个只所有拼音（考虑多音字）
-    pinyins = lazy_pinyin(han) # 不考虑多音字
-    uni_pinyins = []
-    for p in pinyins:
-        py = p
-        if len(p) >= 2:
-            prefix = py[:2]
-            if prefix == "zh" or prefix == 'ch' or prefix == 'sh':
-                py = prefix[:1] + p[2:]
-        if py[0] == 'n' and len(py) > 1:
-            py = 'l' + py[1:]
-        if len(py) >= 3:
-            postfix = py[-3:]
-            if postfix == "ang" or postfix == 'eng' or postfix == 'ing':
-                py = py[:-3] + postfix[:2]
-        uni_pinyins.append(py)
-    return uni_pinyins
+
+# s1 = get_unify_pinyins('佛')
+# s2 = get_unify_pinyins('佛口蛇心')
 
 #b2312_simple_chinese_unicode=[0x524a, 0x56af]
 unicode_pinyins_map = dict()
 pinyin_set = set()
 for unicode in gb2312_simple_chinese_unicode:
-    unicode_pinyins = get_unify_pinyins(chr(unicode))
+    unicode_pinyins = get_all_unify_pinyins(chr(unicode))
     unicode_pinyins_map[unicode] = unicode_pinyins
     for unicode_pinyin in unicode_pinyins:
         pinyin_set.add(unicode_pinyin)

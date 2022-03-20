@@ -12,9 +12,10 @@ import numpy as np
 from . import config
 from .utils.get_file import get_file
 from .utils.logger import logger
-from .utils.text_utils import uniform, is_alphabet_string, convert_to_unicode, is_chinese_string,get_unify_pinyins,lcs
+from .utils.text_utils import uniform, is_alphabet_string, convert_to_unicode, is_chinese_string,get_unify_pinyins,get_all_unify_pinyins, lcs
 from .utils.tokenizer import Tokenizer, split_2_short_text
 import Levenshtein
+from .utils.langconv import Converter
 
 class ErrorType(object):
     # error_type = {"confusion": 1, "word": 2, "char": 3}
@@ -97,12 +98,11 @@ class Detector(object):
         self.stopwords = self.load_word_freq_dict(self.stopwords_path)
         self.pinyin_similarity_map, self.same_pinyin = self.load_same_pinyin(self.same_pinyin_text_path)
         self.en_ch_alias = self.load_en_ch_alias(self.en_ch_alias_path)
-        # 合并切词词典及自定义词典
-        self.custom_word_freq.append(self.person_names)
-        self.custom_word_freq.append(self.place_names)
+        # 合并切词词典及自定义词典 append:加单个元素，extend加list多个元素
+        self.custom_word_freq = self.custom_word_freq.union(self.person_names)
+        self.custom_word_freq = self.custom_word_freq.union(self.place_names)
         # self.custom_word_freq.update(self.stopwords)
-        self.word_freq.extend(self.custom_word_freq)
-        self.word_freq.sort(key=lambda i:len(i), reverse=True) # 按照长度降序排序
+        self.word_freq = self.word_freq.union(self.custom_word_freq)
         # self.tokenizer = Tokenizer(dict_path=self.word_freq_path, custom_word_freq_dict=self.custom_word_freq,
         #                            custom_confusion_dict=self.custom_confusion)
         self.old_new_pose_idx_list = []
@@ -155,17 +155,20 @@ class Detector(object):
                 if line.startswith('#'):
                     continue
                 parts = line.split(sep)
-                if parts and len(parts) == 2:
+                if not parts or len(parts) ==0:
+                    continue
+
+                key_char = parts[0]
+                if len(parts) == 1:
+                    value = set()
+                elif len(parts) == 2:
                     value = set(parts[1])
-                    key_char = parts[0]
-                    same_pinyin_map[key_char] = value
                 elif parts and len(parts) >= 3:
                     value1 = set(parts[1])
                     value2 = set(parts[2])
                     value = value1.union(value2)
-                    key_char = parts[0]
-                    same_pinyin_map[key_char] = value
-                pinyin_set.add(getunify_pinyins(key_char)[0])
+                same_pinyin_map[key_char] = value
+                pinyin_set = pinyin_set.union(set(get_all_unify_pinyins(key_char)))
         pinyin_similarity_map = Detector._build_pinyin_similarity_map(pinyin_set)
         return [pinyin_similarity_map, same_pinyin_map]
 
@@ -188,9 +191,12 @@ class Detector(object):
                     continue
                 parts = line.split(sep)
                 if parts and len(parts) == 2:
-                    chinese = set(parts[1].split(','))
+                    words = parts[1].split(',')
+                    chineses = set()
+                    for han in words:
+                        chineses.add(han.lower())
                     english = parts[0]
-                    result[english] = chinese
+                    result[english] = chineses
         return result
 
     @staticmethod
@@ -200,7 +206,7 @@ class Detector(object):
         :param path:
         :return:
         """
-        word_freq = []
+        word_freq = set()
         if path:
             if not os.path.exists(path):
                 logger.warning('file not found.%s' % path)
@@ -215,7 +221,7 @@ class Detector(object):
                         if len(info) < 1:
                             continue
                         word = info[0]
-                        word_freq.append(word)
+                        word_freq.add(Converter('zh-hans').convert(word).lower())
         return word_freq
 
     def _get_custom_confusion_dict(self, path):
@@ -240,7 +246,7 @@ class Detector(object):
                             continue
                         variant = info[0]
                         origin = info[1]
-                        self.word_freq.append(origin)
+                        self.word_freq.add(origin)
                         confusion[variant] = origin
         return confusion
 
@@ -259,9 +265,9 @@ class Detector(object):
         self.check_detector_initialized()
         word_freqs = self.load_word_freq_dict(path)
         # 合并字典
-        self.custom_word_freq.add(word_freqs)
+        self.custom_word_freq = self.custom_word_freq.union(word_freqs)
         # 合并切词词典及自定义词典
-        self.word_freq.add(self.custom_word_freq)
+        self.word_freq = self.word_freq.union(self.custom_word_freq)
         # self.tokenizer = Tokenizer(dict_path=self.word_freq_path, custom_word_freq_dict=self.custom_word_freq,
         #                            custom_confusion_dict=self.custom_confusion)
         # for k, v in word_freqs.items():
@@ -591,7 +597,7 @@ class Detector(object):
         if self.is_word_error_detect:
             for word in self.word_freq:
                 word_pinyin = get_unify_pinyins(word)
-                lcs_matched_list = lcs(self.pinyin_similarity_map, word_pinyin, lcs_match_threshold)
+                lcs_matched_list = lcs(self.pinyin_similarity_map, sentence_pinyin, word_pinyin, lcs_match_threshold)
                 for lcs_info in lcs_matched_list:
                     begin_idx = lcs_info.get("range")[0]
                     end_idx = lcs_info.get("range")[1] # 包含这个字
