@@ -134,7 +134,7 @@ def segment(sentence, cut_type='word', pos=False):
 
 
 class Tokenizer(object):
-    def __init__(self, dict_path='', custom_word_freq_dict=None, custom_confusion_dict=None):
+    def __init__(self, dict_path='', custom_word_freq_dict=None, custom_confusion_dict=None, en_ch_alias=None):
         self.model = jieba
         self.model.default_logger.setLevel(logging.ERROR)
         # 初始化大词典
@@ -151,6 +151,13 @@ class Tokenizer(object):
                 # 添加到分词器的自定义词典中
                 self.model.add_word(k)
                 self.model.add_word(word)
+        # 加载英文单词中文谐音词典
+        if en_ch_alias:
+            for en,ch_aliases in en_ch_alias.items():
+                # 添加到分词器的自定义词典中
+                self.model.add_word(en)
+                for ch_alias in ch_aliases:
+                    self.model.add_word(ch_alias)
 
     def tokenize(self, unicode_sentence, mode="search"):
         """

@@ -618,7 +618,7 @@ class Detector(object):
                         for freq_word in freq_words:
                             if freq_word != token:
                                 old_start_idx = begin_idx + sentence_old_start_idx
-                                old_end_idx = end_idx + sentence_old_start_idx + 1  # 包含这个字
+                                old_end_idx = (end_idx-1) + sentence_old_start_idx + 1  # 包含这个字
                                 new_start_idx = old_start_idx + former_sentences_size_changed
                                 self.add_pose_idx(old_start_idx, new_start_idx)
                                 maybe_err = (freq_word, old_start_idx, old_end_idx, ErrorType.word)
@@ -627,7 +627,7 @@ class Detector(object):
                         english = self.pinyin_english_map.get(similar_pinyin, None)
                         if english and english != token: #有英文单词的中文谐音和当前词相近
                             old_start_idx = begin_idx + sentence_old_start_idx
-                            old_end_idx = end_idx + sentence_old_start_idx + 1  # 包含这个字
+                            old_end_idx = (end_idx-1) + sentence_old_start_idx + 1  # 包含这个字
                             new_start_idx = old_start_idx + former_sentences_size_changed
                             self.add_pose_idx(old_start_idx, new_start_idx)
                             maybe_err = (english, old_start_idx, old_end_idx, ErrorType.word)
