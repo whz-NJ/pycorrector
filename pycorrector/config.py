@@ -18,9 +18,11 @@ language_model_path = os.path.join(USER_DATA_DIR, '2014_people_meetings.klm')
 
 # -----词典文件路径-----
 # 通用分词词典文件  format: 词语 词频
-word_freq_path = os.path.join(pwd_path, 'data/word_freq.txt')
+word_freq_path = os.path.join(pwd_path, 'data/word_freq_pinyin.txt')
 custom_word_freq_path = os.path.join(pwd_path, 'data/custom_word_freq.txt')
 custom_confusion_path = os.path.join(pwd_path, 'data/corrections.txt')
+similar_pinyins_path = os.path.join(pwd_path, 'data/similar_pinyins.txt')
+
 #英文-中文谐音表
 en_ch_alias_path = os.path.join(pwd_path, 'data/en_ch_alias.txt')
 

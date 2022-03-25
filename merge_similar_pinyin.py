@@ -1,12 +1,13 @@
 import os
-from pycorrector.utils.text_utils import lcs, get_all_unify_pinyins
+from pycorrector.utils.text_utils import get_all_unify_pinyins
 from pypinyin import pinyin, lazy_pinyin, Style
 import Levenshtein
 from pycorrector.utils.langconv import Converter
 
 pwd_path = os.path.abspath(os.path.dirname(__file__))
 # same_pinyin_path0 = os.path.join(pwd_path, 'same_pinyin.txt')
-same_pinyin_path2 = os.path.join(pwd_path, 'pycorrector/data/similar_pinyin.txt')
+similar_pinyin_dist_path = os.path.join(pwd_path, 'pycorrector/data/similar_pinyins.txt')
+same_pinyin_path = os.path.join(pwd_path, 'pycorrector/data/similar_pinyin.txt')
 gb2312_simple_chinese_unicode = [0x4E00,0x4E01,0x4E03,0x4E07,0x4E08,0x4E09,0x4E0A,0x4E0B,0x4E0C,0x4E0D,
 0x4E0E,0x4E10,0x4E11,0x4E13,0x4E14,0x4E15,0x4E16,0x4E18,0x4E19,0x4E1A,
 0x4E1B,0x4E1C,0x4E1D,0x4E1E,0x4E22,0x4E24,0x4E25,0x4E27,0x4E28,0x4E2A,
@@ -705,19 +706,34 @@ for unicode in gb2312_simple_chinese_unicode:
     for unicode_pinyin in unicode_pinyins:
         pinyin_set.add(unicode_pinyin)
 
+similar_pinyin_dist_map = {}
 pinyin_similarity_map = {}
 for pinyin1 in pinyin_set:
-    pinyin_similarity_map[pinyin1] = dict()
+    similar_pinyin_dist_map[pinyin1] = []
     for pinyin2 in pinyin_set:
+        initial2 = pinyin2.split('_')[0]
+        final2 = pinyin2.split('_')[1]
         if pinyin2 == pinyin1:
             pinyin_similarity_map[pinyin1][pinyin2] = 1
             continue
         edit_distance = Levenshtein.distance(pinyin1, pinyin2)
-        pinyin_similarity_map[pinyin1][pinyin2] = 1 - edit_distance / (max(len(pinyin1), len(pinyin2)))
+        matched_score = 1 - edit_distance / (max(len(pinyin1), len(pinyin2)))
+        pinyin_similarity_map[pinyin1][pinyin2] = matched_score
+        if matched_score > 0.7:
+            similar_pinyin_dist_map[pinyin1].append([pinyin2, matched_score])
+
+with open(similar_pinyin_dist_path, 'w', encoding='utf-8') as f:
+    for py in similar_pinyin_dist_map.keys():
+        line = py
+        similar_pinyin_dist_list = [ pinyin_dist[0]+':'+str(pinyin_dist[1]) for pinyin_dist in similar_pinyin_dist_map[py] ]
+        if len(similar_pinyin_dist_list) > 0:
+            line += '\t' + ','.join(similar_pinyin_dist_list) + '\n'
+        else:
+            line += '\n'
+        f.write(line)
 
 similar_pinyin_map = {}
 count = 0
-
 for unicode1 in gb2312_simple_chinese_unicode:
     pinyins1 = unicode_pinyins_map[unicode1]
     similar_pinyin_map[chr(unicode1)] = []
@@ -728,11 +744,8 @@ for unicode1 in gb2312_simple_chinese_unicode:
         matched = False
         for pinyin1 in pinyins1:
             for pinyin2 in pinyins2:
-                if len(pinyin1) >= len(pinyin2):
-                    lcs_info = lcs(pinyin_similarity_map, [pinyin1], [pinyin2],0.7)
-                else:
-                    lcs_info = lcs(pinyin_similarity_map, [pinyin2], [pinyin1],0.7)
-                if len(lcs_info) > 0:
+                matched_score = pinyin_similarity_map[pinyin1][pinyin2]
+                if matched_score > 0.7:
                     similar_pinyin_map[chr(unicode1)].append(chr(unicode2))
                     matched = True
                     break
@@ -742,7 +755,7 @@ for unicode1 in gb2312_simple_chinese_unicode:
     if (count % 100) == 0:
         print(str(count) + " chars processed.\n")
 
-with open(same_pinyin_path2, 'w', encoding='utf-8') as f:
+with open(same_pinyin_path, 'w', encoding='utf-8') as f:
     for char in similar_pinyin_map.keys():
         chars = similar_pinyin_map[char]
         line = char + '\t' + "".join(chars) + '\n'

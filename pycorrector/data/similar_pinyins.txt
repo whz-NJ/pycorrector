@@ -1,0 +1,293 @@
+dao	diao:0.75
+yuan	cuan:0.75,juan:0.75,duan:0.75,quan:0.75,yan:0.75,zuan:0.75,luan:0.75,huan:0.75,suan:0.75,xuan:0.75,guan:0.75,kuan:0.75,ruan:0.75,tuan:0.75,yun:0.75
+wai
+xie
+pai
+sei
+san	suan:0.75
+cuan	yuan:0.75,juan:0.75,duan:0.75,quan:0.75,can:0.75,zuan:0.75,luan:0.75,huan:0.75,cun:0.75,suan:0.75,xuan:0.75,guan:0.75,kuan:0.75,ruan:0.75,cua:0.75,cuai:0.75,tuan:0.75
+gai	guai:0.75
+o
+la
+bin	bian:0.75
+qiong	jiong:0.8,xiong:0.8
+tui
+lan	lian:0.75,luan:0.75
+hng	hong:0.75
+te
+bu
+yi
+men
+lv
+den
+kong	rong:0.75,tong:0.75,song:0.75,cong:0.75,zong:0.75,hong:0.75,yong:0.75,long:0.75,gong:0.75,dong:0.75
+zu
+miao	xiao:0.75,mao:0.75,mian:0.75,liao:0.75,tiao:0.75,diao:0.75,qiao:0.75,piao:0.75,biao:0.75,jiao:0.75
+rong	kong:0.75,tong:0.75,song:0.75,cong:0.75,zong:0.75,hong:0.75,yong:0.75,long:0.75,gong:0.75,dong:0.75
+jue
+mie
+suo
+zui	zuai:0.75
+ten
+zun	zuan:0.75
+bo
+sao
+tuo
+su
+hei
+pei
+pie
+zou
+e
+pan	pian:0.75
+tie
+gun	guan:0.75
+sui	suai:0.75
+juan	yuan:0.75,cuan:0.75,jun:0.75,duan:0.75,quan:0.75,zuan:0.75,jian:0.75,luan:0.75,huan:0.75,suan:0.75,xuan:0.75,guan:0.75,kuan:0.75,ruan:0.75,tuan:0.75
+kuai	suai:0.75,kua:0.75,zuai:0.75,huai:0.75,kui:0.75,guai:0.75,kuan:0.75,cuai:0.75,kai:0.75
+tong	kong:0.75,rong:0.75,song:0.75,cong:0.75,zong:0.75,hong:0.75,yong:0.75,long:0.75,gong:0.75,dong:0.75
+ga
+ran	ruan:0.75
+tai
+dia	diao:0.75,dian:0.75
+run	ruan:0.75
+yue
+an
+ren
+jun	juan:0.75
+bai
+pu
+song	kong:0.75,rong:0.75,tong:0.75,cong:0.75,zong:0.75,hong:0.75,yong:0.75,long:0.75,gong:0.75,dong:0.75
+cong	kong:0.75,rong:0.75,tong:0.75,song:0.75,zong:0.75,hong:0.75,yong:0.75,long:0.75,gong:0.75,dong:0.75
+xiao	miao:0.75,xian:0.75,liao:0.75,tiao:0.75,xia:0.75,diao:0.75,qiao:0.75,piao:0.75,biao:0.75,jiao:0.75
+ku
+duan	yuan:0.75,cuan:0.75,juan:0.75,quan:0.75,zuan:0.75,luan:0.75,huan:0.75,suan:0.75,xuan:0.75,guan:0.75,kuan:0.75,dun:0.75,ruan:0.75,dan:0.75,dian:0.75,tuan:0.75
+hui	huai:0.75
+jin	jian:0.75
+dui
+lun	luan:0.75
+mo
+zong	kong:0.75,rong:0.75,tong:0.75,song:0.75,cong:0.75,hong:0.75,yong:0.75,long:0.75,gong:0.75,dong:0.75
+quan	yuan:0.75,cuan:0.75,juan:0.75,duan:0.75,qun:0.75,zuan:0.75,luan:0.75,qian:0.75,huan:0.75,suan:0.75,xuan:0.75,guan:0.75,kuan:0.75,ruan:0.75,tuan:0.75
+hua	huan:0.75,huai:0.75
+mu
+yan	yuan:0.75
+fan
+die
+hong	hng:0.75,kong:0.75,rong:0.75,tong:0.75,song:0.75,cong:0.75,zong:0.75,yong:0.75,long:0.75,gong:0.75,dong:0.75
+lo
+yong	kong:0.75,rong:0.75,tong:0.75,song:0.75,cong:0.75,zong:0.75,hong:0.75,long:0.75,gong:0.75,dong:0.75
+po
+jia	jian:0.75,jiao:0.75
+zao
+wu
+lian	lan:0.75,bian:0.75,jian:0.75,xian:0.75,lia:0.75,mian:0.75,tian:0.75,luan:0.75,qian:0.75,liao:0.75,dian:0.75,lin:0.75,pian:0.75
+you
+qin	qian:0.75
+han	huan:0.75
+hao
+kuo
+gua	guai:0.75,guan:0.75
+gan	guan:0.75
+lve
+zei
+ge
+cao
+can	cuan:0.75
+pin	pian:0.75
+jie
+diu
+long	kong:0.75,rong:0.75,tong:0.75,song:0.75,cong:0.75,zong:0.75,hong:0.75,yong:0.75,gong:0.75,dong:0.75
+duo
+liu
+ru
+qun	quan:0.75
+tou
+yao
+zuan	yuan:0.75,cuan:0.75,zun:0.75,juan:0.75,duan:0.75,quan:0.75,zuai:0.75,luan:0.75,zua:0.75,huan:0.75,zan:0.75,suan:0.75,xuan:0.75,guan:0.75,kuan:0.75,ruan:0.75,tuan:0.75
+ai
+suai	sui:0.75,kuai:0.75,sai:0.75,zuai:0.75,huai:0.75,suan:0.75,guai:0.75,sua:0.75,cuai:0.75
+hu
+fou
+wa
+bian	bin:0.75,lian:0.75,jian:0.75,xian:0.75,ban:0.75,mian:0.75,tian:0.75,qian:0.75,dian:0.75,pian:0.75,biao:0.75
+ca
+re
+dei
+jian	juan:0.75,jin:0.75,jia:0.75,lian:0.75,bian:0.75,xian:0.75,mian:0.75,tian:0.75,qian:0.75,dian:0.75,pian:0.75,jiao:0.75
+sai	suai:0.75
+sen
+zuo
+lai
+lou
+xian	xiao:0.75,lian:0.75,bian:0.75,jian:0.75,mian:0.75,tian:0.75,qian:0.75,xuan:0.75,xia:0.75,xin:0.75,dian:0.75,pian:0.75
+zi
+kua	kuai:0.75,kuan:0.75
+lia	lian:0.75,liao:0.75
+mi
+ta
+qia	qian:0.75,qiao:0.75
+ban	bian:0.75
+ka
+ha
+tan	tian:0.75,tuan:0.75
+za
+cui	cuai:0.75
+mao	miao:0.75
+bie
+qu
+n
+gei
+er
+mei
+zuai	zui:0.75,kuai:0.75,zuan:0.75,suai:0.75,zua:0.75,huai:0.75,guai:0.75,zai:0.75,cuai:0.75
+mou
+se
+da
+mian	miao:0.75,lian:0.75,bian:0.75,jian:0.75,xian:0.75,tian:0.75,qian:0.75,man:0.75,min:0.75,dian:0.75,pian:0.75
+kei
+tian	lian:0.75,bian:0.75,jian:0.75,xian:0.75,tan:0.75,mian:0.75,qian:0.75,tiao:0.75,tin:0.75,dian:0.75,tuan:0.75,pian:0.75
+luan	yuan:0.75,cuan:0.75,lan:0.75,juan:0.75,duan:0.75,lun:0.75,quan:0.75,lian:0.75,zuan:0.75,huan:0.75,suan:0.75,xuan:0.75,guan:0.75,kuan:0.75,ruan:0.75,tuan:0.75
+sun	suan:0.75
+qian	quan:0.75,lian:0.75,qin:0.75,bian:0.75,jian:0.75,xian:0.75,qia:0.75,mian:0.75,tian:0.75,qiao:0.75,dian:0.75,pian:0.75
+wan
+mai
+a
+dou
+ao
+wen
+hou
+xu
+tao	tiao:0.75
+wo
+kou
+si
+zua	zuan:0.75,zuai:0.75
+lu
+tun	tuan:0.75
+en
+me
+huan	yuan:0.75,cuan:0.75,juan:0.75,duan:0.75,quan:0.75,hua:0.75,han:0.75,zuan:0.75,luan:0.75,huai:0.75,suan:0.75,xuan:0.75,guan:0.75,kuan:0.75,ruan:0.75,tuan:0.75,hun:0.75
+ei
+ti
+fei
+kao
+tu
+xiu
+guo
+huai	kuai:0.75,hui:0.75,hua:0.75,suai:0.75,zuai:0.75,huan:0.75,hai:0.75,guai:0.75,cuai:0.75
+m
+zan	zuan:0.75
+zen
+cen
+fu
+xi
+cun	cuan:0.75
+suan	yuan:0.75,san:0.75,cuan:0.75,juan:0.75,duan:0.75,quan:0.75,zuan:0.75,suai:0.75,luan:0.75,sun:0.75,huan:0.75,sua:0.75,xuan:0.75,guan:0.75,kuan:0.75,ruan:0.75,tuan:0.75
+hai	huai:0.75
+lei
+kui	kuai:0.75
+guai	gai:0.75,kuai:0.75,gua:0.75,suai:0.75,zuai:0.75,huai:0.75,gui:0.75,guan:0.75,cuai:0.75
+liao	miao:0.75,xiao:0.75,lian:0.75,lia:0.75,tiao:0.75,diao:0.75,qiao:0.75,lao:0.75,piao:0.75,biao:0.75,jiao:0.75
+bao	biao:0.75
+ji
+sou
+gen
+gui	guai:0.75
+sua	suai:0.75,suan:0.75
+miu
+bi
+fo
+kun	kuan:0.75
+du
+xuan	yuan:0.75,cuan:0.75,juan:0.75,duan:0.75,quan:0.75,zuan:0.75,xian:0.75,luan:0.75,huan:0.75,suan:0.75,guan:0.75,xun:0.75,kuan:0.75,ruan:0.75,tuan:0.75
+qie
+tiao	miao:0.75,xiao:0.75,tian:0.75,tao:0.75,liao:0.75,diao:0.75,qiao:0.75,piao:0.75,biao:0.75,jiao:0.75
+gou
+tin	tian:0.75
+ze
+fa
+he
+xia	xiao:0.75,xian:0.75
+zai	zuai:0.75
+huo
+guan	yuan:0.75,cuan:0.75,gun:0.75,juan:0.75,duan:0.75,quan:0.75,gua:0.75,gan:0.75,zuan:0.75,luan:0.75,huan:0.75,suan:0.75,guai:0.75,xuan:0.75,kuan:0.75,ruan:0.75,tuan:0.75
+dai
+man	mian:0.75
+diao	dao:0.75,miao:0.75,dia:0.75,xiao:0.75,liao:0.75,tiao:0.75,qiao:0.75,dian:0.75,piao:0.75,biao:0.75,jiao:0.75
+kan	kuan:0.75
+wei
+lg
+yu
+pi
+din	dian:0.75
+xue
+jiu
+ba
+bei
+pou
+xun	xuan:0.75
+lie
+kuan	yuan:0.75,cuan:0.75,juan:0.75,kuai:0.75,duan:0.75,quan:0.75,zuan:0.75,kua:0.75,luan:0.75,huan:0.75,suan:0.75,kun:0.75,xuan:0.75,guan:0.75,kan:0.75,ruan:0.75,tuan:0.75
+min	mian:0.75
+pao	piao:0.75
+que
+di
+yo
+ju
+luo
+dun	duan:0.75
+rou
+sa
+cou
+ruan	yuan:0.75,cuan:0.75,juan:0.75,ran:0.75,run:0.75,duan:0.75,quan:0.75,zuan:0.75,luan:0.75,huan:0.75,suan:0.75,xuan:0.75,guan:0.75,kuan:0.75,tuan:0.75
+yin
+pa
+li
+qiao	miao:0.75,xiao:0.75,qia:0.75,qian:0.75,liao:0.75,tiao:0.75,diao:0.75,piao:0.75,biao:0.75,jiao:0.75
+ci
+qi
+dan	duan:0.75,dian:0.75
+xin	xian:0.75
+cua	cuan:0.75,cuai:0.75
+lao	liao:0.75
+cuai	cuan:0.75,kuai:0.75,suai:0.75,cui:0.75,zuai:0.75,huai:0.75,guai:0.75,cua:0.75,cai:0.75
+ya
+ke
+len
+ce
+ruo
+jiong	qiong:0.8,xiong:0.8
+rao
+hen
+cai	cuai:0.75
+ken
+dian	dia:0.75,duan:0.75,lian:0.75,bian:0.75,jian:0.75,xian:0.75,mian:0.75,tian:0.75,qian:0.75,diao:0.75,din:0.75,dan:0.75,pian:0.75
+tuan	yuan:0.75,cuan:0.75,juan:0.75,duan:0.75,quan:0.75,zuan:0.75,tan:0.75,tian:0.75,luan:0.75,tun:0.75,huan:0.75,suan:0.75,xuan:0.75,guan:0.75,kuan:0.75,ruan:0.75
+gao
+cu
+ye
+lin	lian:0.75
+gong	kong:0.75,rong:0.75,tong:0.75,song:0.75,cong:0.75,zong:0.75,hong:0.75,yong:0.75,long:0.75,dong:0.75
+fen
+ben
+pian	pan:0.75,lian:0.75,pin:0.75,bian:0.75,jian:0.75,xian:0.75,mian:0.75,tian:0.75,qian:0.75,dian:0.75,piao:0.75
+xiong	qiong:0.8,jiong:0.8
+piao	miao:0.75,xiao:0.75,liao:0.75,tiao:0.75,diao:0.75,pao:0.75,qiao:0.75,pian:0.75,biao:0.75,jiao:0.75
+de
+le
+pen
+dong	kong:0.75,rong:0.75,tong:0.75,song:0.75,cong:0.75,zong:0.75,hong:0.75,yong:0.75,long:0.75,gong:0.75
+ma
+biao	miao:0.75,xiao:0.75,bian:0.75,liao:0.75,bao:0.75,tiao:0.75,diao:0.75,qiao:0.75,piao:0.75,jiao:0.75
+hun	huan:0.75
+kai	kuai:0.75
+jiao	miao:0.75,xiao:0.75,jia:0.75,jian:0.75,liao:0.75,tiao:0.75,diao:0.75,qiao:0.75,piao:0.75,biao:0.75
+qiu
+yun	yuan:0.75
+tei
+gu
+ri
+cuo
+rui
+ou

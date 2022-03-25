@@ -8,6 +8,7 @@ import time
 from codecs import open
 import re
 import numpy as np
+import operator
 
 from . import config
 from .utils.get_file import get_file
@@ -41,6 +42,7 @@ class Detector(object):
                  stopwords_path=config.stopwords_path,
                  same_pinyin_path=config.same_pinyin_path,
                  en_ch_alias_path=config.en_ch_alias_path,
+                 similar_pinyins_path = config.similar_pinyins_path
                  ):
         self.name = 'detector'
         self.language_model_path = language_model_path
@@ -52,6 +54,7 @@ class Detector(object):
         self.stopwords_path = stopwords_path
         self.same_pinyin_text_path = same_pinyin_path
         self.en_ch_alias_path = en_ch_alias_path
+        self.similar_pinyins_path = similar_pinyins_path
         self.is_char_error_detect = True
         self.is_word_error_detect = True
         self.initialized_detector = False
@@ -63,6 +66,11 @@ class Detector(object):
         self.place_names = None
         self.stopwords = None
         self.tokenizer = None
+
+    def update_words_freq_pinyin(self):
+        for word_freq in self.word_freq:
+            if word_freq not in self.word_freq_pinyin:
+                self.word_freq_pinyin[word_freq] = get_unify_pinyins(word_freq.lower())
 
     def _initialize_detector(self):
         t1 = time.time()
@@ -87,6 +95,7 @@ class Detector(object):
         t2 = time.time()
         logger.debug('Loaded language model: %s, spend: %.3f s.' % (self.language_model_path, t2 - t1))
 
+        self.word_freq_pinyin = {}
         # 词、频数dict
         self.word_freq = self.load_word_freq_dict(self.word_freq_path)
         # 自定义混淆集
@@ -96,16 +105,17 @@ class Detector(object):
         self.person_names = self.load_word_freq_dict(self.person_name_path)
         self.place_names = self.load_word_freq_dict(self.place_name_path)
         self.stopwords = self.load_word_freq_dict(self.stopwords_path)
-        self.pinyin_similarity_map, self.same_pinyin = self.load_same_pinyin(self.same_pinyin_text_path)
-        self.en_ch_alias = self.load_en_ch_alias(self.en_ch_alias_path)
+        self.same_pinyin = self.load_same_pinyin(self.same_pinyin_text_path) ## ??
+        self.en_ch_alias, self.en_ch_alias_pinyin = self.load_en_ch_alias(self.en_ch_alias_path)
         # 合并切词词典及自定义词典 append:加单个元素，extend加list多个元素
         self.custom_word_freq = self.custom_word_freq.union(self.person_names)
         self.custom_word_freq = self.custom_word_freq.union(self.place_names)
         # self.custom_word_freq.update(self.stopwords)
         self.word_freq = self.word_freq.union(self.custom_word_freq)
+        self.update_words_freq_pinyin()
+        self.pinyin_similarity_map = self.load_similar_pinyins(self.similar_pinyins_path) ## ??
         # self.tokenizer = Tokenizer(dict_path=self.word_freq_path, custom_word_freq_dict=self.custom_word_freq,
         #                            custom_confusion_dict=self.custom_confusion)
-        self.old_new_pose_idx_list = []
         t3 = time.time()
         logger.debug('Loaded dict file, spend: %.3f s.' % (t3 - t2))
         self.initialized_detector = True
@@ -113,6 +123,59 @@ class Detector(object):
     def check_detector_initialized(self):
         if not self.initialized_detector:
             self._initialize_detector()
+
+    def load_similar_pinyins(self, path):
+        """
+         加载拼音相似度文件
+         :param path:
+         :return:
+         """
+        pinyin_similarity_map = {}
+        if path:
+            if not os.path.exists(path):
+                logger.warning('file not found.%s' % path)
+                return pinyin_similarity_map
+            else:
+                with open(path, 'r', encoding='utf-8') as f:
+                    for line in f:
+                        line = line.strip()
+                        if line.startswith('#'):
+                            continue
+                        info = line.split('\t')
+                        if len(info) < 1:
+                            continue
+                        py = info[0]
+                        similar_pys = []
+                        if len(info) > 1:
+                            for py_similarity in info[1].split(','):
+                                similar_py = py_similarity.split(':')[0]
+                                similarity = float(py_similarity.split(':')[1])
+                                similar_pys.append([similar_py, similarity])
+                        pinyin_similarity_map[py] = similar_pys
+        return pinyin_similarity_map
+
+    def build_sentence_pinyin_map(self, sentence):
+        sentence_pinyin_map = {}
+        pinyins = get_unify_pinyins(sentence.lower())
+        for pos,py in enumerate(pinyins):
+            pos_similarities = sentence_pinyin_map.get(py, None)
+            if pos_similarities is None:
+                 sentence_pinyin_map[py] = [[pos, 1]]
+            else:
+                pos_similarities.append([pos, 1])
+            similar_pys = self.pinyin_similarity_map[py]
+            for py_similarity in similar_pys:
+                similar_py = py_similarity[0]
+                similarity = py_similarity[1]
+                pos_similarities = sentence_pinyin_map.get(similar_py, None)
+                if pos_similarities is None:
+                    sentence_pinyin_map[similar_py] = [[pos, similarity]]
+                else:
+                    pos_similarities.append([pos, similarity])
+        for py in sentence_pinyin_map:
+            pos_similarities = sentence_pinyin_map[py]
+            sentence_pinyin_map[py] = sorted(pos_similarities, key=lambda x: x[0], reverse=True)
+        return sentence_pinyin_map
 
     @staticmethod
     def _build_pinyin_similarity_map(pinyin_set):
@@ -169,8 +232,8 @@ class Detector(object):
                     value = value1.union(value2)
                 same_pinyin_map[key_char] = value
                 pinyin_set = pinyin_set.union(set(get_all_unify_pinyins(key_char)))
-        pinyin_similarity_map = Detector._build_pinyin_similarity_map(pinyin_set)
-        return [pinyin_similarity_map, same_pinyin_map]
+        #pinyin_similarity_map = Detector._build_pinyin_similarity_map(pinyin_set)
+        return  same_pinyin_map
 
     @staticmethod
     def load_en_ch_alias(path, sep='\t'):
@@ -180,10 +243,11 @@ class Detector(object):
         :param sep:
         :return:
         """
-        result = dict()
+        en_ch_alias_map = dict()
+        en_ch_alias_pinyin_map = dict()
         if not os.path.exists(path):
             logger.warn("file not exists:" + path)
-            return result
+            return [en_ch_alias_map, en_ch_alias_pinyin_map]
         with open(path, 'r', encoding='utf-8') as f:
             for line in f:
                 line = line.strip()
@@ -191,16 +255,19 @@ class Detector(object):
                     continue
                 parts = line.split(sep)
                 if parts and len(parts) == 2:
-                    words = parts[1].split(',')
-                    chineses = set()
-                    for han in words:
-                        chineses.add(han.lower())
+                    ch_aliases = parts[1].split(',')
+                    chinese_alias = set()
+                    pinyins = []
+                    for ch_alias in ch_aliases:
+                        alias = ch_alias.lower()
+                        chinese_alias.add(alias)
+                        pinyins.append(get_unify_pinyins(alias))
                     english = parts[0]
-                    result[english] = chineses
-        return result
+                    en_ch_alias_map[english] = chinese_alias
+                    en_ch_alias_pinyin_map[english] = pinyins
+        return [en_ch_alias_map, en_ch_alias_pinyin_map]
 
-    @staticmethod
-    def load_word_freq_dict(path):
+    def load_word_freq_dict(self, path):
         """
         加载切词词典
         :param path:
@@ -221,7 +288,11 @@ class Detector(object):
                         if len(info) < 1:
                             continue
                         word = info[0]
-                        word_freq.add(Converter('zh-hans').convert(word).lower())
+                        word = Converter('zh-hans').convert(word).lower()
+                        word_freq.add(word)
+                        if len(info) >= 4:
+                            self.word_freq_pinyin[word]=info[3].split(',')
+
         return word_freq
 
     def _get_custom_confusion_dict(self, path):
@@ -336,6 +407,7 @@ class Detector(object):
         return False
 
     def bin_search_pose_idx(self, old_pose_idx):
+        #old_new_pose_idx_list 是升序排序的
         left = 0
         right = len(self.old_new_pose_idx_list) - 1
         while left <= right:
@@ -577,18 +649,17 @@ class Detector(object):
                 maybe_err = (correction, old_start_idx, old_start_idx + len(confuse), ErrorType.confusion)
                 self._add_maybe_error_item(maybe_err, maybe_errors_map)
 
-        sentence_pinyin = get_unify_pinyins(sentence)
+        sentence_pinyin_map = self.build_sentence_pinyin_map(sentence)
         lcs_match_threshold = 0.7
         ## 根据英文单词的中文谐音，找到匹配的英文单词
         for en_word in self.en_ch_alias:
-            for ch_alias in self.en_ch_alias[en_word]:
-                chinese_pinyin = get_unify_pinyins(ch_alias)
-                lcs_matched_list = lcs(self.pinyin_similarity_map, sentence_pinyin, chinese_pinyin, lcs_match_threshold)
-                for lcs_info in lcs_matched_list:
+            for chinese_pinyin in self.en_ch_alias_pinyin[en_word]:
+                lcs_info = lcs(sentence_pinyin_map, chinese_pinyin, lcs_match_threshold)
+                if lcs_info is not None:
                     begin_idx = lcs_info.get("range")[0]
                     end_idx = lcs_info.get("range")[1]  # 包含这个字
                     old_start_idx = begin_idx + sentence_old_start_idx
-                    old_end_idx = end_idx + sentence_old_start_idx + 1  # 包含这个字
+                    old_end_idx = end_idx + sentence_old_start_idx + 1  # +1变成不包含这个字
                     new_start_idx = old_start_idx + former_sentences_size_changed
                     self.add_pose_idx(old_start_idx, new_start_idx)
                     maybe_err = (en_word, old_start_idx, old_end_idx, ErrorType.word)
@@ -596,13 +667,13 @@ class Detector(object):
         ## 根据最长公共子序列匹配，找可能出错的热词
         if self.is_word_error_detect:
             for word in self.word_freq:
-                word_pinyin = get_unify_pinyins(word)
-                lcs_matched_list = lcs(self.pinyin_similarity_map, sentence_pinyin, word_pinyin, lcs_match_threshold)
-                for lcs_info in lcs_matched_list:
+                word_pinyin = self.word_freq_pinyin[word]
+                lcs_info = lcs(sentence_pinyin_map, word_pinyin, lcs_match_threshold)
+                if lcs_info is not None:
                     begin_idx = lcs_info.get("range")[0]
                     end_idx = lcs_info.get("range")[1] # 包含这个字
                     old_start_idx = begin_idx + sentence_old_start_idx
-                    old_end_idx = end_idx + sentence_old_start_idx + 1 # 包含这个字
+                    old_end_idx = end_idx + sentence_old_start_idx + 1 # +1变成不包含这个字
                     new_start_idx = old_start_idx + former_sentences_size_changed
                     self.add_pose_idx(old_start_idx, new_start_idx)
                     maybe_err = (word, old_start_idx, old_end_idx, ErrorType.word)

@@ -30,7 +30,8 @@ class Corrector(Detector):
                  person_name_path=config.person_name_path,
                  place_name_path=config.place_name_path,
                  stopwords_path=config.stopwords_path,
-                 en_ch_alias_path=config.en_ch_alias_path
+                 en_ch_alias_path=config.en_ch_alias_path,
+                 similar_pinyins_path = config.similar_pinyins_path
                  ):
         super(Corrector, self).__init__(language_model_path=language_model_path,
                                         word_freq_path=word_freq_path,
@@ -40,7 +41,8 @@ class Corrector(Detector):
                                         place_name_path=place_name_path,
                                         stopwords_path=stopwords_path,
                                         same_pinyin_path=same_pinyin_path,
-                                        en_ch_alias_path=config.en_ch_alias_path
+                                        en_ch_alias_path=en_ch_alias_path,
+                                        similar_pinyins_path=similar_pinyins_path
                                         )
         self.name = 'corrector'
         self.common_char_path = common_char_path
@@ -90,7 +92,7 @@ class Corrector(Detector):
         # chinese common char
         self.cn_char_set = self.load_set_file(self.common_char_path)
         # same stroke
-        self.same_stroke = self.load_same_stroke(self.same_stroke_text_path)
+        #self.same_stroke = self.load_same_stroke(self.same_stroke_text_path)
         self.initialized_corrector = True
 
     def check_corrector_initialized(self):
@@ -238,7 +240,7 @@ class Corrector(Detector):
                     top_score = score
                     top_candidate = candidate
             # 只要原词ppl_score得分小于最通顺替换词得分的threshold倍，则不替换，防止误纠
-            if (top_score * threshold) >= cur_score:
+            if (top_score * threshold) <= cur_score:
                 if top_candidate[0] != cur_item:
                     top_candidate = cur_candidate
             top_token = top_candidate[0]
@@ -286,7 +288,8 @@ class Corrector(Detector):
         text = convert_to_unicode(text)
         # 长句切分为短句
         blocks = split_2_short_text(text, include_symbol=include_symbol)
-        self.old_new_pos_list = []
+        # self.old_new_pos_list = []
+        self.old_new_pose_idx_list = []
         total_delta = 0
         for blk, idx in blocks:
             # maybe_errors_map 的 key 为原词在 text 中的 开始位置_结束位置
