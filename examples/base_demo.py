@@ -11,7 +11,8 @@ sys.path.append("..")
 import pycorrector
 
 if __name__ == '__main__':
-    corrected_sent, detail = pycorrector.correct('家里的歪发信号不好')
+    corrected_sent, detail = pycorrector.correct('希望你们好好的跳无')
+    # corrected_sent, detail = pycorrector.correct('家里的歪发信号不好')
     #corrected_sent, detail = pycorrector.correct('下面请消峰分享项目经验')
     #corrected_sent, detail = pycorrector.correct('视讯打屏计费确认页分省贯控需求')
     # corrected_sent, detail = pycorrector.correct('一只小鱼船浮在平静的河面上')

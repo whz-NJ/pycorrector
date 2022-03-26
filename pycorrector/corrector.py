@@ -20,7 +20,7 @@ from .utils.tokenizer import segment, split_2_short_text
 class Corrector(Detector):
     def __init__(self,
                  common_char_path=config.common_char_path,
-                 same_pinyin_path=config.same_pinyin_path,
+                 similar_hans_path=config.similar_hans_path,
                  # same_stroke_path=config.same_stroke_path,
                  language_model_path=config.language_model_path,
                  word_freq_path=config.word_freq_path,
@@ -40,7 +40,7 @@ class Corrector(Detector):
                                         person_name_path=person_name_path,
                                         place_name_path=place_name_path,
                                         stopwords_path=stopwords_path,
-                                        same_pinyin_path=same_pinyin_path,
+                                        similar_hans_path=similar_hans_path,
                                         en_ch_alias_path=en_ch_alias_path,
                                         similar_pinyins_path=similar_pinyins_path
                                         )
@@ -207,7 +207,7 @@ class Corrector(Detector):
         #找纠错项
         top_token = None
         crossed_maybe_errors = maybe_errors_map[crossed_begin_end_idx]
-        for token, begin_idx, end_idx, error_type in crossed_maybe_errors:
+        for token, begin_idx, end_idx, matched_score, error_type in crossed_maybe_errors:
             if error_type == ErrorType.confusion: #强制纠错
                 top_token = token
                 old_begin_idx = begin_idx
@@ -219,17 +219,17 @@ class Corrector(Detector):
                 cur_item = sentence[new_begin_idx:new_end_idx]
                 break #重叠位置的纠错项仅随机取一个
         if top_token is None: #未找到强制纠错项
-            new_begin_idx = self.get_current_pose_idx(crossed_begin_idx) - modified_sentence_old_start_idx
-            # crossed_end_idx 在 old_new_pose_idx_list 表没有记录
-            new_end_idx = new_begin_idx + (crossed_end_idx - crossed_begin_idx)
-            # 取得待纠错的词
-            cur_item = sentence[new_begin_idx:new_end_idx]
+            # new_begin_idx = self.get_current_pose_idx(crossed_begin_idx) - modified_sentence_old_start_idx
+            # # crossed_end_idx 在 old_new_pose_idx_list 表没有记录
+            # new_end_idx = new_begin_idx + (crossed_end_idx - crossed_begin_idx)
+            # # 取得待纠错的词
+            # cur_item = sentence[new_begin_idx:new_end_idx]
             #correction_ppl_score_map = {}
             cur_score = self.ppl_score(segment(sentence, cut_type))
-            cur_candidate = (cur_item, crossed_begin_idx, crossed_end_idx, ErrorType.word)
+            # cur_candidate = (cur_item, crossed_begin_idx, crossed_end_idx, ErrorType.word)
             #correction_ppl_score_map[candidate] = score
             top_score = cur_score
-            top_candidate = cur_candidate
+            top_candidate = None
             for candidate in crossed_maybe_errors:
                 token, begin_idx, end_idx = candidate[0],candidate[1],candidate[2]
                 new_begin_idx = self.get_current_pose_idx(begin_idx) - modified_sentence_old_start_idx
@@ -239,18 +239,18 @@ class Corrector(Detector):
                 if top_score > score: # ppl_score 越小越通顺
                     top_score = score
                     top_candidate = candidate
-            # 只要原词ppl_score得分小于最通顺替换词得分的threshold倍，则不替换，防止误纠
-            if (top_score * threshold) <= cur_score:
-                if top_candidate[0] != cur_item:
-                    top_candidate = cur_candidate
-            top_token = top_candidate[0]
-            old_begin_idx = top_candidate[1]
-            old_end_idx = top_candidate[2]
-            new_begin_idx = self.get_current_pose_idx(old_begin_idx) - modified_sentence_old_start_idx
-            new_end_idx = new_begin_idx + (old_end_idx - old_begin_idx)
+            if (top_score * threshold) >= cur_score: # 替换词流畅度得分不足，恢复为原词，防止误纠
+                top_candidate = None
+            if top_candidate is not None:
+                top_token = top_candidate[0]
+                old_begin_idx = top_candidate[1]
+                old_end_idx = top_candidate[2]
+                new_begin_idx = self.get_current_pose_idx(old_begin_idx) - modified_sentence_old_start_idx
+                new_end_idx = new_begin_idx + (old_end_idx - old_begin_idx)
+                cur_item = sentence[new_begin_idx:new_end_idx]
 
         del maybe_errors_map[crossed_begin_end_idx]
-        if top_token != cur_item: #发现调整项
+        if top_token is not None: #发现调整项
             # 修正句子
             sentence = sentence[:new_begin_idx] + top_token + sentence[new_end_idx:]
             # 记录修正信息

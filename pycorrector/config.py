@@ -30,7 +30,7 @@ en_ch_alias_path = os.path.join(pwd_path, 'data/en_ch_alias.txt')
 common_char_path = os.path.join(pwd_path, 'data/common_char_set.txt')
 # 同音字
 #same_pinyin_path = os.path.join(pwd_path, 'data/same_pinyin_2.txt')
-same_pinyin_path = os.path.join(pwd_path, 'data/similar_pinyin.txt')
+similar_hans_path = os.path.join(pwd_path, 'data/similar_hans.txt')
 # 形似字
 # same_stroke_path = os.path.join(pwd_path, 'data/same_stroke.txt')
 # 知名人名词典 format: 词语 词频

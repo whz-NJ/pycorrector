@@ -40,7 +40,7 @@ class Detector(object):
                  person_name_path=config.person_name_path,
                  place_name_path=config.place_name_path,
                  stopwords_path=config.stopwords_path,
-                 same_pinyin_path=config.same_pinyin_path,
+                 similar_hans_path=config.similar_hans_path,
                  en_ch_alias_path=config.en_ch_alias_path,
                  similar_pinyins_path = config.similar_pinyins_path
                  ):
@@ -52,7 +52,7 @@ class Detector(object):
         self.person_name_path = person_name_path
         self.place_name_path = place_name_path
         self.stopwords_path = stopwords_path
-        self.same_pinyin_text_path = same_pinyin_path
+        self.similar_hans_path = similar_hans_path
         self.en_ch_alias_path = en_ch_alias_path
         self.similar_pinyins_path = similar_pinyins_path
         self.is_char_error_detect = True
@@ -105,7 +105,7 @@ class Detector(object):
         self.person_names = self.load_word_freq_dict(self.person_name_path)
         self.place_names = self.load_word_freq_dict(self.place_name_path)
         self.stopwords = self.load_word_freq_dict(self.stopwords_path)
-        self.same_pinyin = self.load_same_pinyin(self.same_pinyin_text_path) ## ??
+        self.hans_similarity_map = self.load_similar_hans(self.similar_hans_path) ## ??
         self.en_ch_alias, self.en_ch_alias_pinyin = self.load_en_ch_alias(self.en_ch_alias_path)
         # 合并切词词典及自定义词典 append:加单个元素，extend加list多个元素
         self.custom_word_freq = self.custom_word_freq.union(self.person_names)
@@ -163,7 +163,7 @@ class Detector(object):
                  sentence_pinyin_map[py] = [[pos, 1]]
             else:
                 pos_similarities.append([pos, 1])
-            similar_pys = self.pinyin_similarity_map[py]
+            similar_pys = self.pinyin_similarity_map.get(py, [])
             for py_similarity in similar_pys:
                 similar_py = py_similarity[0]
                 similarity = py_similarity[1]
@@ -197,43 +197,39 @@ class Detector(object):
         :return:
         """
         self.check_corrector_initialized()
-        return self.same_pinyin.get(char, set())
+        return self.hans_similarity_map.get(char, set())
 
     @staticmethod
-    def load_same_pinyin(path, sep='\t'):
+    def load_similar_hans(path):
         """
         加载同音字
         :param path:
         :param sep:
         :return:
         """
-        pinyin_set = set()
-        same_pinyin_map = dict()
+        similar_hans_map = dict()
         if not os.path.exists(path):
             logger.warn("file not exists:" + path)
-            return [pinyin_set, same_pinyin_map]
+            return similar_hans_map
         with open(path, 'r', encoding='utf-8') as f:
             for line in f:
                 line = line.strip()
                 if line.startswith('#'):
                     continue
-                parts = line.split(sep)
+                parts = line.split('\t')
                 if not parts or len(parts) ==0:
                     continue
 
                 key_char = parts[0]
-                if len(parts) == 1:
-                    value = set()
-                elif len(parts) == 2:
-                    value = set(parts[1])
-                elif parts and len(parts) >= 3:
-                    value1 = set(parts[1])
-                    value2 = set(parts[2])
-                    value = value1.union(value2)
-                same_pinyin_map[key_char] = value
-                pinyin_set = pinyin_set.union(set(get_all_unify_pinyins(key_char)))
+                value = []
+                if len(parts) == 2:
+                    for han_similarity in parts[1].split(','):
+                        similar_han = han_similarity.split(':')[0]
+                        similarity = float(han_similarity.split(':')[1])
+                        value.append([similar_han, similarity])
+                similar_hans_map[key_char] = value
         #pinyin_similarity_map = Detector._build_pinyin_similarity_map(pinyin_set)
-        return  same_pinyin_map
+        return  similar_hans_map
 
     @staticmethod
     def load_en_ch_alias(path, sep='\t'):
@@ -492,7 +488,14 @@ class Detector(object):
         begin_pos1 = min_begin
         end_pos1 = max_end
 
+    # def _get_map_size(self, maybe_errors_map):
+    #     count = 0
+    #     for key in maybe_errors_map:
+    #         count += len(maybe_errors_map[key])
+    #     return count
+
     def _add_maybe_error_item(self, maybe_err, maybe_errors_map):
+        # old_count = self._get_map_size(maybe_errors_map)
         """
         新增错误
         :param maybe_err:
@@ -501,43 +504,78 @@ class Detector(object):
         """
         begin_idx = 1
         end_idx = 2
-        begin_pos1 = maybe_err[begin_idx]
-        end_pos1 = maybe_err[end_idx]
+        merged_begin_pos = maybe_err[begin_idx]
+        merged_end_pos = maybe_err[end_idx]
+        former_merged_errs = list()
+        former_merged_errs.append(maybe_err)
         changed = True
         merged = False
         while changed:
             changed = False
+            keys = []
+            keys.extend(maybe_errors_map.keys())
+            if keys is None:
+                break
             # 查找有重叠的纠错项
-            for key in list(maybe_errors_map):
+            for key in keys:
                 poses = key.split("_")
-                begin_pos0 = int(poses[0])
-                end_pos0 = int(poses[1])
-                if (begin_pos1 >= end_pos0) or (end_pos1 <= begin_pos0):
+                begin_pos = int(poses[0])
+                end_pos = int(poses[1])
+                if (merged_begin_pos >= end_pos) or (merged_end_pos <= begin_pos):
                     continue # 位置没有交错
-                if (begin_pos0 == begin_pos1) and (end_pos0 == end_pos1):
-                    maybe_errors = maybe_errors_map[key]
-                    if maybe_err in maybe_errors:
-                        continue #跳过已合并项
-                #有重叠，将重叠的项合并到list中
-                min_begin = min(begin_pos0, begin_pos1)
-                max_end = max(end_pos0, end_pos1)
-                new_key = str(min_begin) + "_" + str(max_end)
+                elif (merged_begin_pos == begin_pos and merged_end_pos == end_pos): #位置一样
+                    if not merged: # 当前元素没有合并过，则合并
+                        maybe_errors = maybe_errors_map[key]
+                        maybe_errors.extend(former_merged_errs)
+                        former_merged_errs = maybe_errors
+                        merged = True
+                        changed = True
+                    continue # 已经合并了
                 maybe_errors = maybe_errors_map[key]
-                maybe_errors.append(maybe_err)
-                maybe_errors_map[new_key] = maybe_errors
-                if new_key == key:
-                    return #新加入的纠错项,key用已经存在的,这个key之前已经考虑过合并，不需要再while循环检查了
-                del maybe_errors_map[key]
+                #有重叠，将重叠的项合并到list中
+                min_begin = min(begin_pos, merged_begin_pos)
+                max_end = max(end_pos, merged_end_pos)
+                merged_key = str(min_begin) + "_" + str(max_end)
+                former_merged_key = str(merged_begin_pos) + "_" + str(merged_end_pos)
+                maybe_errors.extend(former_merged_errs)
+                if merged_key in maybe_errors_map:
+                    if former_merged_key == merged_key: # 之前已合并项和新的已合并项相同
+                        maybe_errors_map[merged_key] = maybe_errors
+                    elif merged_key != key:
+                        maybe_errors_map[merged_key].extend(maybe_errors)
+                    else: # former_merged_key != merged_key 并且 merged_key = key
+                        # print("err=" + str(maybe_err))
+                        # for key in maybe_errors_map:
+                        #     print(key + ":" + str(maybe_errors_map[key]))
+                        # print('\n')
+                        # new_count = self._get_map_size(maybe_errors_map)
+                        # if new_count != (old_count +1):
+                        #     print("error!!!!!")
+                        return  # 新加入的纠错项,key用已经存在的,这个key之前已经考虑过合并，不需要再while循环检查了
+                else:
+                    # 此时 key != new_key, 因为 new_key 不在 maybe_errors_map，而key在
+                    maybe_errors_map[merged_key] = maybe_errors
+                if merged_key != key:
+                    del maybe_errors_map[key]
                 # 更新范围，将和 maybe_err 有重叠的所有 maybe_errors 合并为一个整体
                 # 然后看看之前判断和 maybe_errr 没有重叠的项，和合并后的项是否有重叠
-                begin_pos1 = min_begin
-                end_pos1 = max_end
+                merged_begin_pos = min_begin
+                merged_end_pos = max_end
+                former_merged_errs = maybe_errors_map[merged_key]
                 merged = True
                 changed = True
         # 没有找到交错位置的纠错项
         if not merged:
-            new_key = str(maybe_err[begin_idx]) + "_" + str(maybe_err[end_idx])
-            maybe_errors_map[new_key] = [maybe_err]
+            merged_key = str(maybe_err[begin_idx]) + "_" + str(maybe_err[end_idx])
+            maybe_errors_map[merged_key] = [maybe_err]
+            # print("err=" + str(maybe_err))
+            # for key in maybe_errors_map:
+            #     print(key + ":" + str(maybe_errors_map[key]))
+            #
+            # new_count = self._get_map_size(maybe_errors_map)
+            # if new_count != (old_count + 1):
+            #     print("error!!!!!")
+            # print('\n')
 
     @staticmethod
     def _get_maybe_error_index(scores, ratio=0.6745, threshold=2):
@@ -628,11 +666,11 @@ class Detector(object):
 
     def detect_short(self, sentence, sentence_old_start_idx=0, former_sentences_size_changed=0):
         """
-        检测句子中的疑似错误信息，包括 [候选词,原词起始位置,原词结束位置,错误类型]
+        检测句子中的疑似错误信息，包括 [候选词,原词起始位置,原词结束位置,匹配得分,错误类型]
         :param sentence:
         :param sentence_old_start_idx: 当前句子首字在原始text中的位置
         :param former_sentences_size_changed: 前面已修正句子总长度相对原始text的长度变化量
-        :return: map{原词起始位置_原词结束位置: [correction_words, begin_pos, end_pos, error_type]}
+        :return: map{原词起始位置_原词结束位置: [correction_words, begin_pos, end_pos, matched_score, error_type]}
         """
         # 初始化
         self.check_detector_initialized()
@@ -646,7 +684,7 @@ class Detector(object):
                 new_start_idx = old_start_idx + former_sentences_size_changed
                 self.add_pose_idx(old_start_idx, new_start_idx)
                 # maybe_err 的 start_idx/end_idx 为修改前原词在 text(原始用户输入，包含若干句) 中的下标位置
-                maybe_err = (correction, old_start_idx, old_start_idx + len(confuse), ErrorType.confusion)
+                maybe_err = (correction, old_start_idx, old_start_idx + len(confuse), len(confuse), ErrorType.confusion)
                 self._add_maybe_error_item(maybe_err, maybe_errors_map)
 
         sentence_pinyin_map = self.build_sentence_pinyin_map(sentence)
@@ -658,11 +696,12 @@ class Detector(object):
                 if lcs_info is not None:
                     begin_idx = lcs_info.get("range")[0]
                     end_idx = lcs_info.get("range")[1]  # 包含这个字
+                    matched_score = lcs_info.get('maxMatchedLen') * lcs_info.get('matchedScore')
                     old_start_idx = begin_idx + sentence_old_start_idx
                     old_end_idx = end_idx + sentence_old_start_idx + 1  # +1变成不包含这个字
                     new_start_idx = old_start_idx + former_sentences_size_changed
                     self.add_pose_idx(old_start_idx, new_start_idx)
-                    maybe_err = (en_word, old_start_idx, old_end_idx, ErrorType.word)
+                    maybe_err = (en_word, old_start_idx, old_end_idx, matched_score, ErrorType.word)
                     self._add_maybe_error_item(maybe_err, maybe_errors_map)
         ## 根据最长公共子序列匹配，找可能出错的热词
         if self.is_word_error_detect:
@@ -672,11 +711,12 @@ class Detector(object):
                 if lcs_info is not None:
                     begin_idx = lcs_info.get("range")[0]
                     end_idx = lcs_info.get("range")[1] # 包含这个字
+                    matched_score = lcs_info.get('maxMatchedLen') * lcs_info.get('matchedScore')
                     old_start_idx = begin_idx + sentence_old_start_idx
                     old_end_idx = end_idx + sentence_old_start_idx + 1 # +1变成不包含这个字
                     new_start_idx = old_start_idx + former_sentences_size_changed
                     self.add_pose_idx(old_start_idx, new_start_idx)
-                    maybe_err = (word, old_start_idx, old_end_idx, ErrorType.word)
+                    maybe_err = (word, old_start_idx, old_end_idx, matched_score, ErrorType.word)
                     self._add_maybe_error_item(maybe_err, maybe_errors_map)
 
         if self.is_char_error_detect:
@@ -711,14 +751,23 @@ class Detector(object):
                         if token in self.stopwords:
                             continue
                         # 取拼音接近的单字
-                        for char in self.same_pinyin.get(token):
+                        for char_similarity in self.hans_similarity_map.get(token):
                             old_start_idx = i + sentence_old_start_idx
                             new_start_idx = old_start_idx + former_sentences_size_changed
                             self.add_pose_idx(old_start_idx, new_start_idx)
-                            maybe_err = (char, old_start_idx, old_start_idx + 1, ErrorType.word)
+                            maybe_err = (char_similarity[0], old_start_idx, old_start_idx + 1, char_similarity[1], ErrorType.word)
                             self._add_maybe_error_item(maybe_err, maybe_errors_map)
             except IndexError as ie:
                 logger.warn("index error, sentence:" + sentence + str(ie))
             except Exception as e:
                 logger.warn("detect error, sentence:" + sentence + str(e))
         return maybe_errors_map
+
+# detector = Detector()
+# maybe_errors_map = {}
+# detector.add_maybe_error_item(('wifi', 3, 7, 'word'), maybe_errors_map)
+# detector.add_maybe_error_item(('玁', 5, 6, 'word'), maybe_errors_map)
+# detector.add_maybe_error_item(('攦', 1, 2, 'word'), maybe_errors_map)
+# detector.add_maybe_error_item(('峤', 0, 1, 'word'), maybe_errors_map)
+# detector.add_maybe_error_item(('隷', 1, 2, 'word'), maybe_errors_map)
+# print('ok')
