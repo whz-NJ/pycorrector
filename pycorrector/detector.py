@@ -692,7 +692,7 @@ class Detector(object):
                 self._add_maybe_error_item(maybe_err, maybe_errors_map)
 
         sentence_pinyin_map = self.build_sentence_pinyin_map(sentence)
-        lcs_match_threshold = 0.8
+        lcs_match_threshold = 0.9
         ## 根据英文单词的中文谐音，找到匹配的英文单词
         for en_word in self.en_ch_alias:
             for chinese_pinyin in self.en_ch_alias_pinyin[en_word]:
@@ -753,6 +753,8 @@ class Detector(object):
                             continue
                         # pass in stop word dict
                         if token in self.stopwords:
+                            continue
+                        if self.hans_similarity_map.get(token) is None:
                             continue
                         # 取拼音接近的单字
                         for char_similarity in self.hans_similarity_map.get(token):
