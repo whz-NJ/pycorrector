@@ -13,10 +13,11 @@ with open(input_file_path, 'r', encoding='utf-8') as f:
             continue
         fields = line2.split()
         if len(fields) > 0:
-            chinese = fields[0]
-            py = get_unify_pinyins(chinese.lower())
-            fields.append(','.join(py))
-            lines.append(fields)
+            chinese = fields[0].strip()
+            if len(chinese) >= 2:
+                py = get_unify_pinyins(chinese.lower())
+                fields.append(','.join(py))
+                lines.append(fields)
 
 with open(output_file_path, 'w', encoding='utf-8') as f:
     for line in lines:

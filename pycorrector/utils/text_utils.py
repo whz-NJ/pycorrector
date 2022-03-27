@@ -12,7 +12,7 @@ from pycorrector.utils.langconv import Converter
 import Levenshtein
 # https://blog.csdn.net/u012762625/article/details/43371625
 lis_dp = [0 for i in range(100)] # LIS算法中，dp[i]表示输入序列中，长度为i的上升（序列值顺序增加）子序列中最小末尾数
-lis_pos = [0 for i in range(100)] #LIS算法中，记录最小末尾的下标
+lis_pos = [0 for i in range(100)] #LIS算法中，pos[i]记录输入序列第i个值在dp数组中的下标
 def convert_to_unicode(text):
     """Converts `text` to Unicode (if it's not already), assuming utf-8 input."""
     if six.PY3:
@@ -226,7 +226,9 @@ def lcs(sentence_pinyin_map, words_pinyin, threshold=0.7):
         return None
 
     max_unmatched_cnt = int(len(words_pinyin)) * (1-threshold)
+    min_matched_score = int(len(words_pinyin)) * threshold
     unmatched_cnt = 0
+    gross_matched_score = 0
     pos_similarities_list = []
     for word_py in words_pinyin:
         pos_similarity_list = sentence_pinyin_map.get(word_py, None)
@@ -236,10 +238,17 @@ def lcs(sentence_pinyin_map, words_pinyin, threshold=0.7):
             if unmatched_cnt > max_unmatched_cnt:
                 return None
         else:
+            max_score = 0
+            for pos_similarity in pos_similarity_list: #一个拼音只会在一个位置出现，算最大匹配值
+                if max_score < pos_similarity[1]:
+                    max_score = pos_similarity[1]
+            gross_matched_score += max_score
             pos_similarities_list.extend(pos_similarity_list)
     if len(pos_similarities_list) == 1:
         return {'maxMatchedLen': 1, 'matchedScore': pos_similarities_list[0][1],
                 'range': [pos_similarities_list[0][0], pos_similarities_list[0][0]]}
+    if gross_matched_score < min_matched_score:
+        return None
 
     lis_dp[0] = pos_similarities_list[0][0]
     lis_pos[0] = 0
@@ -254,14 +263,26 @@ def lcs(sentence_pinyin_map, words_pinyin, threshold=0.7):
             insert_pos = bin_search(lis_dp, lis_len, pos_similarities_list[idx][0])
             lis_dp[insert_pos] = pos_similarities_list[idx][0]
             lis_pos[idx] = insert_pos
+    if lis_len < min_matched_score:
+        return None
+
     stack = []
     i = len(pos_similarities_list) - 1
     j = lis_len - 1
     matched_score = 0
     while i >= 0: #从后往前找，所以先入栈的位置序号大
         if lis_pos[i] == j:
-            stack.append(pos_similarities_list[i][0])
-            matched_score += pos_similarities_list[i][1]
+            if j > 0:
+                stack.append(pos_similarities_list[i][0])
+                matched_score += pos_similarities_list[i][1]
+            else:
+                if len(stack) > 0:
+                    # 找到左边最靠右的位置
+                    while i > 0 and pos_similarities_list[i-1][0] < stack[-1]:
+                        i -= 1
+                stack.append(pos_similarities_list[i][0]) #使用
+                matched_score += pos_similarities_list[i][1]
+                break
             j -= 1
         if j == -1:
             break
@@ -335,44 +356,72 @@ if __name__ == "__main__":
     # print(is_alphabet_string('Teacher '))
 
     # lcs(sentence_pinyin_map, words_pinyin, threshold=0.7):
-    lst = [2]
-    pos = bin_search(lst, 1, 1)
-    print(pos)
+    # lst = [2]
+    # pos = bin_search(lst, 1, 1)
+    # print(pos)
+    #
+    # lst = [1]
+    # pos = bin_search(lst, 1, 5)
+    # print(pos)
+    #
+    # lst = [1, 5]
+    # pos = bin_search(lst, 2, 3)
+    # print(pos)
+    #
+    # lst = [1, 3]
+    # pos = bin_search(lst, 2, 6)
+    # print(pos)
+    #
+    # lst = [1, 3, 6]
+    # pos = bin_search(lst, 3, 4)
+    # print(pos)
+    #
+    # lst = [1, 3, 4]
+    # pos = bin_search(lst, 3, 8)
+    # print(pos)
 
-    lst = [1]
-    pos = bin_search(lst, 1, 5)
-    print(pos)
+    # lst = [5, 6]
+    # pos = bin_search(lst, 2, 3)
+    # print(pos)
+    #
+    # lst = [3, 6]
+    # pos = bin_search(lst, 2, 4)
+    # print(pos)
 
-    lst = [1, 5]
-    pos = bin_search(lst, 2, 3)
-    print(pos)
+    # sentence_pinyin_map = {}
+    # sentence_pinyin_map['jia']=[[0,1]]
+    # sentence_pinyin_map['jian'] = [[0, 0.75]]
+    # sentence_pinyin_map['jiao'] = [[0, 0.75]]
+    # sentence_pinyin_map['li'] = [[1, 1]]
+    # sentence_pinyin_map['de'] = [[2, 1]]
+    # sentence_pinyin_map['wai'] = [[3, 1]]
+    # sentence_pinyin_map['fa'] = [[4, 1]]
+    # sentence_pinyin_map['xin'] = [[5, 1]]
+    # sentence_pinyin_map['xian'] = [[5, 0.75]]
+    # sentence_pinyin_map['hao'] = [[8, 1],[6,1]]
+    # sentence_pinyin_map['bu'] = [[7, 1]]
+    # words_pinyin = ['wai','fa','wai','fa','hao']
+    # lcs_info = lcs(sentence_pinyin_map, words_pinyin, threshold=0.7)
 
-    lst = [1, 3]
-    pos = bin_search(lst, 2, 6)
-    print(pos)
+    # sentence_pinyin_map = {}
+    # sentence_pinyin_map['xin'] = [[5, 1]]
+    # sentence_pinyin_map['hao'] = [[6, 1]]
+    # sentence_pinyin_map['bu'] = [[3, 1]]
+    # words_pinyin = ['xin','hao','bu']
+    # lcs_info = lcs(sentence_pinyin_map, words_pinyin, threshold=0.7)
+    # print(lcs_info)
 
-    lst = [1, 3, 6]
-    pos = bin_search(lst, 3, 4)
-    print(pos)
-
-    lst = [1, 3, 4]
-    pos = bin_search(lst, 3, 8)
-    print(pos)
+    # sentence_pinyin_map = {}
+    # sentence_pinyin_map['xin'] = [[5, 0.5]]
+    # sentence_pinyin_map['hao'] = [[1, 1]]
+    # sentence_pinyin_map['bu'] = [[4, 0.4]]
+    # words_pinyin = ['xin','hao','bu']
+    # lcs_info = lcs(sentence_pinyin_map, words_pinyin, threshold=0.1)
+    # print(lcs_info)
 
     sentence_pinyin_map = {}
-    sentence_pinyin_map['jia']=[[0,1]]
-    sentence_pinyin_map['jian'] = [[0, 0.75]]
-    sentence_pinyin_map['jiao'] = [[0, 0.75]]
-    sentence_pinyin_map['li'] = [[1, 1]]
-    sentence_pinyin_map['de'] = [[2, 1]]
-    sentence_pinyin_map['wai'] = [[3, 1]]
-    sentence_pinyin_map['fa'] = [[4, 1]]
-    sentence_pinyin_map['xin'] = [[5, 1]]
-    sentence_pinyin_map['xian'] = [[5, 0.75]]
-    sentence_pinyin_map['hao'] = [[8, 1],[6,1]]
-    sentence_pinyin_map['bu'] = [[7, 1]]
-    words_pinyin = ['wai','fa','wai','fa','hao']
-    lcs_info = lcs(sentence_pinyin_map, words_pinyin, threshold=0.7)
+    sentence_pinyin_map['suan'] = [[6, 1]]
+    sentence_pinyin_map['cen'] = [[3, 0.6],[1,0.6]]
+    words_pinyin = ['suan','cen']
+    lcs_info = lcs(sentence_pinyin_map, words_pinyin, threshold=0.1)
     print(lcs_info)
-
-

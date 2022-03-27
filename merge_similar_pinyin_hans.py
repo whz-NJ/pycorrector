@@ -715,7 +715,7 @@ for pinyin1 in pinyin_set:
         edit_distance = Levenshtein.distance(pinyin1, pinyin2)
         matched_score = 1 - edit_distance / (max(len(pinyin1), len(pinyin2)))
         pinyin_similarity_map[pinyin1][pinyin2] = matched_score
-        if matched_score > 0.7:
+        if matched_score > 0.65: #单个字拼音相似度低点没关系，后面还要经过lcs计算整体相似度
             similar_pinyins_map[pinyin1].append([pinyin2, matched_score])
 
 with open(similar_pinyins_path, 'w', encoding='utf-8') as f:

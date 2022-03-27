@@ -21,7 +21,7 @@ def demo():
 
 def main(args):
     if args.data == 'sighan_15' and args.model == 'rule':
-        demo()
+        # demo()
         # Sentence Level: acc:0.173225, precision:0.979592, recall:0.148541, f1:0.257965, cost time:230.92 s
         eval.eval_sighan2015_by_model(pycorrector.correct)
     if args.data == 'sighan_15' and args.model == 'bert':

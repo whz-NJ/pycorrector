@@ -12,9 +12,9 @@ pwd_path = os.path.abspath(os.path.dirname(__file__))
 USER_DATA_DIR = os.path.expanduser('~/.pycorrector/datasets/')
 os.makedirs(USER_DATA_DIR, exist_ok=True)
 #WHZ for test
-#language_model_path = os.path.join(USER_DATA_DIR, 'zh_giga.no_cna_cmn.prune01244.klm')
+language_model_path = os.path.join(USER_DATA_DIR, 'zh_giga.no_cna_cmn.prune01244.klm')
 #language_model_path = os.path.join(USER_DATA_DIR, 'people_chars_lm.klm')
-language_model_path = os.path.join(USER_DATA_DIR, '2014_people_meetings.klm')
+#language_model_path = os.path.join(USER_DATA_DIR, '2014_people_meetings.klm')
 
 # -----词典文件路径-----
 # 通用分词词典文件  format: 词语 词频

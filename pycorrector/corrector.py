@@ -6,9 +6,9 @@
 import operator
 import os
 from codecs import open
-
+import sys
 from pypinyin import lazy_pinyin
-
+import numpy as np
 from . import config
 from .detector import Detector, ErrorType
 from .utils.logger import logger
@@ -187,7 +187,7 @@ class Corrector(Detector):
         confusion_sorted = sorted(confusion_word_list, key=lambda k: self.word_frequency(k), reverse=True)
         return confusion_sorted[:len(confusion_word_list) // fragment + 1]
 
-    def get_lm_correct_item(self, sentence, modified_sentence_old_start_idx, crossed_begin_end_idx, maybe_errors_map, details, cut_type='word', threshold=1.2):
+    def get_lm_correct_item(self, sentence, modified_sentence_old_start_idx, crossed_begin_end_idx, maybe_errors_map, details, cut_type='char', threshold=1.5):
         """
         通过语言模型纠正字词错误
         :param sentence: 目前为止纠错得到的最新的句子内容
@@ -228,19 +228,38 @@ class Corrector(Detector):
             cur_score = self.ppl_score(segment(sentence, cut_type))
             # cur_candidate = (cur_item, crossed_begin_idx, crossed_end_idx, ErrorType.word)
             #correction_ppl_score_map[candidate] = score
-            top_score = cur_score
+            top_scores = []
+            top_candidates = []
+            top_similarities = []
             top_candidate = None
             for candidate in crossed_maybe_errors:
                 token, begin_idx, end_idx = candidate[0],candidate[1],candidate[2]
                 new_begin_idx = self.get_current_pose_idx(begin_idx) - modified_sentence_old_start_idx
                 new_end_idx = new_begin_idx + (end_idx - begin_idx)
                 score = self.ppl_score(segment(sentence[:new_begin_idx] + token + sentence[new_end_idx:], cut_type))
-                #correction_ppl_score_map[candidate] = score
-                if top_score > score: # ppl_score 越小越通顺
-                    top_score = score
-                    top_candidate = candidate
-            if (top_score * threshold) >= cur_score: # 替换词流畅度得分不足，恢复为原词，防止误纠
-                top_candidate = None
+                if (score * threshold) < cur_score: #得分越小越通顺
+                    top_scores.append(score)
+                    top_candidates.append(candidate)
+                    top_similarities.append(candidate[3])
+            if len(top_scores) > 0:
+                mean_score = np.mean(top_scores) #均值
+                std_score = np.std(top_scores) #标准差
+                mean_similarity = np.mean(top_similarities)
+                std_similarity = np.std(top_similarities)
+                max_composed_score = -sys.maxsize
+                for idx in range(len(top_scores)):
+                    if std_score > 0.00001:
+                        score = (top_scores[idx] - mean_score) / std_score #参数标准化
+                    else:
+                        score = 0
+                    if std_similarity > 0.00001:
+                        similarity = (top_similarities[idx] - mean_similarity) / std_similarity
+                    else:
+                        similarity = 0
+                    composed_score = similarity - score
+                    if max_composed_score < composed_score:
+                        top_candidate = top_candidates[idx]
+                        max_composed_score = composed_score
             if top_candidate is not None:
                 top_token = top_candidate[0]
                 old_begin_idx = top_candidate[1]
@@ -292,6 +311,9 @@ class Corrector(Detector):
         self.old_new_pose_idx_list = []
         total_delta = 0
         for blk, idx in blocks:
+            if len(blk) <= 1:
+                text_new += blk
+                continue
             # maybe_errors_map 的 key 为原词在 text 中的 开始位置_结束位置
             # value 为 [候选词,原词起始位置,原词结束位置,错误类型]
             blk2 = blk

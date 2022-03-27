@@ -149,6 +149,8 @@ class Detector(object):
                         if len(info) > 1:
                             for py_similarity in info[1].split(','):
                                 similar_py = py_similarity.split(':')[0]
+                                if similar_py == py:
+                                    continue
                                 similarity = float(py_similarity.split(':')[1])
                                 similar_pys.append([similar_py, similarity])
                         pinyin_similarity_map[py] = similar_pys
@@ -225,6 +227,8 @@ class Detector(object):
                 if len(parts) == 2:
                     for han_similarity in parts[1].split(','):
                         similar_han = han_similarity.split(':')[0]
+                        if similar_han == key_char:
+                            continue
                         similarity = float(han_similarity.split(':')[1])
                         value.append([similar_han, similarity])
                 similar_hans_map[key_char] = value
@@ -688,7 +692,7 @@ class Detector(object):
                 self._add_maybe_error_item(maybe_err, maybe_errors_map)
 
         sentence_pinyin_map = self.build_sentence_pinyin_map(sentence)
-        lcs_match_threshold = 0.7
+        lcs_match_threshold = 0.8
         ## 根据英文单词的中文谐音，找到匹配的英文单词
         for en_word in self.en_ch_alias:
             for chinese_pinyin in self.en_ch_alias_pinyin[en_word]:
