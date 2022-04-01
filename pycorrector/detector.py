@@ -177,7 +177,7 @@ class Detector(object):
         for py in sentence_pinyin_map:
             pos_similarities = sentence_pinyin_map[py]
             sentence_pinyin_map[py] = sorted(pos_similarities, key=lambda x: x[0], reverse=True)
-        return sentence_pinyin_map
+        return pinyins, sentence_pinyin_map
 
     @staticmethod
     def _build_pinyin_similarity_map(pinyin_set):
@@ -691,12 +691,12 @@ class Detector(object):
                 maybe_err = (correction, old_start_idx, old_start_idx + len(confuse), len(confuse), ErrorType.confusion)
                 self._add_maybe_error_item(maybe_err, maybe_errors_map)
 
-        sentence_pinyin_map = self.build_sentence_pinyin_map(sentence)
-        lcs_match_threshold = 0.9
+        sentence_pinyin, sentence_pinyin_map = self.build_sentence_pinyin_map(sentence)
+        lcs_match_threshold = 0.849
         ## 根据英文单词的中文谐音，找到匹配的英文单词
         for en_word in self.en_ch_alias:
             for chinese_pinyin in self.en_ch_alias_pinyin[en_word]:
-                lcs_info = lcs(sentence_pinyin_map, chinese_pinyin, lcs_match_threshold)
+                lcs_info = lcs(sentence_pinyin, sentence_pinyin_map, chinese_pinyin, lcs_match_threshold)
                 if lcs_info is not None:
                     begin_idx = lcs_info.get("range")[0]
                     end_idx = lcs_info.get("range")[1]  # 包含这个字
@@ -711,7 +711,7 @@ class Detector(object):
         if self.is_word_error_detect:
             for word in self.word_freq:
                 word_pinyin = self.word_freq_pinyin[word]
-                lcs_info = lcs(sentence_pinyin_map, word_pinyin, lcs_match_threshold)
+                lcs_info = lcs(sentence_pinyin, sentence_pinyin_map, word_pinyin, lcs_match_threshold)
                 if lcs_info is not None:
                     begin_idx = lcs_info.get("range")[0]
                     end_idx = lcs_info.get("range")[1] # 包含这个字

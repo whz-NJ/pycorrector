@@ -13,7 +13,7 @@ import pycorrector
 
 if __name__ == '__main__':
     # corrected_sent, detail = pycorrector.correct('一只小鱼船浮在平净的河面上。')
-    corrected_sent, detail = pycorrector.correct('有可能牠的心理受到伤害。')
+    corrected_sent, detail = pycorrector.correct('搭进第二十一世纪')
     #corrected_sent, detail = pycorrector.correct('希望你们好好的跳无。')
     #corrected_sent, detail = pycorrector.correct('我跟我朋唷打算去法国玩儿。')
     # corrected_sent, detail = pycorrector.correct('家里的歪发信号不好')
@@ -30,6 +30,6 @@ if __name__ == '__main__':
         '一只小鱼船浮在平净的河面上',
         '我的家乡是有明的渔米之乡',
     ]
-    for line in error_sentences:
-        correct_sent, err = pycorrector.correct(line)
-        print("{} => {} {}".format(line, correct_sent, err))
+    # for line in error_sentences:
+    #     correct_sent, err = pycorrector.correct(line)
+    #     print("{} => {} {}".format(line, correct_sent, err))

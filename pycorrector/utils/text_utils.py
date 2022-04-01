@@ -220,68 +220,63 @@ def bin_search(dp, dp_len, target):
 
 
 # 获取LCS串(longest common subsquence)，转换为LIS，通过二分法查找
-def lcs(sentence_pinyin_map, words_pinyin, threshold=0.7):
+def lcs(sentence_pinyin, sentence_pinyin_map, words_pinyin, threshold=0.7):
     if len(words_pinyin) > 100:
         print("too long words")
         return None
 
-    max_unmatched_cnt = int(len(words_pinyin)) * (1-threshold)
-    min_matched_score = int(len(words_pinyin)) * threshold
-    unmatched_cnt = 0
+    pinyin_len = 0
     gross_matched_score = 0
-    pos_similarities_list = []
+    pos_similarity_pinyin_list = []
     for word_py in words_pinyin:
-        pos_similarity_list = sentence_pinyin_map.get(word_py, None)
-        if pos_similarity_list is None:
-            unmatched_cnt += 1
-            # 先粗略过滤掉不可能匹配的热词
-            if unmatched_cnt > max_unmatched_cnt:
-                return None
-        else:
+        pinyin_len += len(word_py)
+        pos_sim_list = sentence_pinyin_map.get(word_py, None)
+        pos_sim_py_list = []
+        if pos_sim_list is not None:
             max_score = 0
-            for pos_similarity in pos_similarity_list: #一个拼音只会在一个位置出现，算最大匹配值
+            for pos_similarity in pos_sim_list: #一个拼音只会在一个位置出现，算最大匹配值
                 if max_score < pos_similarity[1]:
                     max_score = pos_similarity[1]
-            gross_matched_score += max_score
-            pos_similarities_list.extend(pos_similarity_list)
-    if len(pos_similarities_list) == 1:
-        return {'maxMatchedLen': 1, 'matchedScore': pos_similarities_list[0][1],
-                'range': [pos_similarities_list[0][0], pos_similarities_list[0][0]]}
+                pos_sim_py_list.append([pos_similarity[0], pos_similarity[1], word_py])
+            gross_matched_score += max_score * len(word_py)
+            pos_similarity_pinyin_list.extend(pos_sim_py_list)
+    # if len(pos_similarity_pinyin_list) == 1:
+    #     return {'maxMatchedLen': 1, 'matchedScore': pos_similarity_pinyin_list[0][1],
+    #             'range': [pos_similarity_pinyin_list[0][0], pos_similarity_pinyin_list[0][0]]}
+    min_matched_score = pinyin_len * threshold
     if gross_matched_score < min_matched_score:
         return None
 
-    lis_dp[0] = pos_similarities_list[0][0]
+    lis_dp[0] = pos_similarity_pinyin_list[0][0]
     lis_pos[0] = 0
     lis_len = 1
-    for idx in range(1, len(pos_similarities_list)):
+    for idx in range(1, len(pos_similarity_pinyin_list)):
         # 如果大于dp中最大的元素，则直接插入到dp数组末尾
-        if lis_dp[lis_len - 1] < pos_similarities_list[idx][0]:
-            lis_dp[lis_len] = pos_similarities_list[idx][0]
+        if lis_dp[lis_len - 1] < pos_similarity_pinyin_list[idx][0]:
+            lis_dp[lis_len] = pos_similarity_pinyin_list[idx][0]
             lis_pos[idx] = lis_len
             lis_len += 1
         else:
-            insert_pos = bin_search(lis_dp, lis_len, pos_similarities_list[idx][0])
-            lis_dp[insert_pos] = pos_similarities_list[idx][0]
+            insert_pos = bin_search(lis_dp, lis_len, pos_similarity_pinyin_list[idx][0])
+            lis_dp[insert_pos] = pos_similarity_pinyin_list[idx][0]
             lis_pos[idx] = insert_pos
-    if lis_len < min_matched_score:
-        return None
 
     stack = []
-    i = len(pos_similarities_list) - 1
+    i = len(pos_similarity_pinyin_list) - 1
     j = lis_len - 1
     matched_score = 0
     while i >= 0: #从后往前找，所以先入栈的位置序号大
         if lis_pos[i] == j:
             if j > 0:
-                stack.append(pos_similarities_list[i][0])
-                matched_score += pos_similarities_list[i][1]
+                stack.append(pos_similarity_pinyin_list[i][0])
+                matched_score += (pos_similarity_pinyin_list[i][1]*len(pos_similarity_pinyin_list[i][2]))
             else:
                 if len(stack) > 0:
                     # 找到左边最靠右的位置
-                    while i > 0 and pos_similarities_list[i-1][0] < stack[-1]:
+                    while i > 0 and pos_similarity_pinyin_list[i-1][0] < stack[-1]:
                         i -= 1
-                stack.append(pos_similarities_list[i][0]) #使用
-                matched_score += pos_similarities_list[i][1]
+                stack.append(pos_similarity_pinyin_list[i][0]) #使用
+                matched_score += (pos_similarity_pinyin_list[i][1]*len(pos_similarity_pinyin_list[i][2]))
                 break
             j -= 1
         if j == -1:
@@ -289,7 +284,14 @@ def lcs(sentence_pinyin_map, words_pinyin, threshold=0.7):
         i -= 1
     min_pos = stack[-1] #从后往前找，所以后入栈的位置序号小
     max_pos = stack[0] #从后往前找，所以先入栈的位置序号大
-    matched_score = matched_score / max(len(words_pinyin), max_pos - min_pos + 1)
+    if matched_score < min_matched_score:
+        return None
+    matched_chars = 0
+    idx = min_pos
+    while idx <= max_pos:
+        matched_chars += len(sentence_pinyin[idx])
+        idx += 1
+    matched_score = matched_score / max(matched_chars, pinyin_len)
     if matched_score < threshold:
         return None
     matched_info = {'maxMatchedLen': max_pos - min_pos + 1, 'matchedScore': matched_score, 'range': [min_pos, max_pos]}
@@ -419,9 +421,16 @@ if __name__ == "__main__":
     # lcs_info = lcs(sentence_pinyin_map, words_pinyin, threshold=0.1)
     # print(lcs_info)
 
+    # sentence_pinyin_map = {}
+    # sentence_pinyin=['ta','jin']
+    # sentence_pinyin_map['jin'] = [[7, 0.6666666666666667], [1, 1]]
+    # sentence_pinyin_map['ta'] = [[0, 0.5]]
+    # words_pinyin = ['ta','jin']
+    # lcs_info = lcs(sentence_pinyin, sentence_pinyin_map, words_pinyin, threshold=0.79)
     sentence_pinyin_map = {}
-    sentence_pinyin_map['suan'] = [[6, 1]]
-    sentence_pinyin_map['cen'] = [[3, 0.6],[1,0.6]]
-    words_pinyin = ['suan','cen']
-    lcs_info = lcs(sentence_pinyin_map, words_pinyin, threshold=0.1)
+    # 搭进第二十一世纪
+    sentence_pinyin=['da', 'jin', 'di', 'er', 'si', 'yi', 'si', 'ji']
+    sentence_pinyin_map['er'] = [[3,1]]
+    words_pinyin = ['zan','er','he','san','mo','bu','zao','tou','lao']
+    lcs_info = lcs(sentence_pinyin, sentence_pinyin_map, words_pinyin, threshold=0.79)
     print(lcs_info)
